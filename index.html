@@ -3,16 +3,16 @@
 【ChatGPT】
 【FileName】index.html
 【作成日時】2026-10-21
-【概要】子ども向け計算練習アプリの初期試作。繰上り・繰り下がりのない1桁の足し算・引き算を電卓式入力で練習する。
-【使い方】ブラウザで開き、足し算・引き算を選んで「練習スタート」。数字キーで答えを入力し、「こたえあわせ」を押す。
-【仕様】ローカル保存なし。問題読み上げ、音声入力、3つの数、全問正解モード、マイナスの答えは未実装。
+【概要】子ども向け計算練習アプリ。1桁の足し算・引き算を電卓式ボタンで練習する。
+【使い方】ブラウザで開き、計算を選んで「練習スタート」。数字を押すとすぐに答え合わせ。
+【仕様】誤答後は同じ問題を再挑戦。ローカル保存なし。読み上げ、音声入力、3つの数、全問正解モード、マイナスの答えは未実装。
 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8ff">
-  <title>けいさんチャレンジ v0.1</title>
+    <title>けいさんチャレンジ v0.2</title>
   <style>
     :root { color-scheme: light; --ink:#26334b; --muted:#71809a; --blue:#5c76ed; --purple:#8d68dc; --mint:#54c8a2; --pink:#ff8b9d; --paper:#fff; }
     * { box-sizing:border-box; }
@@ -46,10 +46,11 @@
     .feedback.good { color:#23966d; }
     .feedback.try { color:#e47759; }
     .keypad { display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:13px; }
-    .key { min-height:57px;border:1px solid #e8ecf6;border-radius:16px;background:#fff;font-size:23px;font-weight:800;box-shadow:0 3px 8px #25304e0b; }
-    .key.utility { background:#f2f4fb;color:#596984;font-size:16px; }
-    .key.enter { background:#e7fbf3;color:#19865f;font-size:15px; }
-    .key:disabled { opacity:.5;cursor:default; }
+    .key { min-height:57px;border:1px solid #b9c8db;border-radius:13px;background:#eaf1ff;color:#173c73;font-size:23px;font-weight:800;touch-action:manipulation;transition:transform .08s,filter .08s,opacity .12s; }
+    .key:active:not(:disabled) { filter:brightness(.94);transform:translateY(1px); }
+    .key.utility { background:#f2f5fa;color:#29405d;font-size:16px; }
+    .key.chosen-answer,.key.chosen-answer:disabled { opacity:1!important;background:color-mix(in srgb,#eaf1ff 55%,#85aff0 45%);filter:none;box-shadow:none;transform:none; }
+    .key:disabled:not(.chosen-answer) { opacity:.55;cursor:default; }
     .actions { display:flex;gap:9px;margin-top:14px; }
     .secondary { flex:1;border:1px solid #e5e9f3;background:#fff;border-radius:14px;padding:12px 8px;font-weight:800;font-size:14px; }
     .secondary.stop { color:#71809a; }
@@ -65,7 +66,7 @@
 <body>
   <main class="app">
     <header>
-      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div class="version">VERSION 0.1 · おためし版</div></div></div>
+      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div class="version">VERSION 0.2 · おためし版</div></div></div>
       <div class="badge">1けた</div>
     </header>
 
@@ -93,9 +94,8 @@
         <button class="key" data-digit="7">7</button><button class="key" data-digit="8">8</button><button class="key" data-digit="9">9</button>
         <button class="key utility" data-action="clear">けす</button><button class="key" data-digit="0">0</button><button class="key utility" data-action="back">⌫</button>
       </div>
-      <button id="check" class="start" style="margin-top:11px">こたえあわせ</button>
-      <div class="actions"><button id="newQuestion" class="secondary">つぎの もんだい</button><button id="stop" class="secondary stop">おわる</button></div>
-      <p class="tiny">まちがえたら、同じ問題でもう一度こたえられるよ。</p>
+      <div class="actions"><button id="stop" class="secondary stop">おわる</button></div>
+      <p class="tiny">数字を押すとすぐに判定するよ。まちがえたら、同じ問題をもう一度！</p>
     </section>
 
     <section id="finish" class="card done hidden">
@@ -137,11 +137,11 @@
       }
       input = '';
       locked = false;
+      document.querySelectorAll('.key').forEach(button => { button.disabled = false; button.classList.remove('chosen-answer'); });
       problemEl.textContent = `${current.a} ${current.sign} ${current.b} ＝ ?`;
       feedbackEl.textContent = 'こたえを いれてね';
       feedbackEl.className = 'feedback';
       updateAnswer();
-      document.querySelector('#check').disabled = false;
     }
 
     function updateAnswer() {
@@ -150,9 +150,10 @@
     }
 
     function typeDigit(digit) {
-      if (locked || input.length >= 2) return;
+      if (locked || input.length >= String(current.answer).length) return;
       input += digit;
       updateAnswer();
+      if (input.length >= String(current.answer).length) checkAnswer();
     }
 
     function checkAnswer() {
@@ -163,25 +164,35 @@
         }
         return;
       }
+      locked = true;
+      document.querySelectorAll('.key').forEach(button => {
+        button.disabled = true;
+        if (button.dataset.digit && input.includes(button.dataset.digit)) button.classList.add('chosen-answer');
+      });
       if (Number(input) === current.answer) {
-        locked = true;
         solved += 1;
         document.querySelector('#solved').textContent = solved;
-        feedbackEl.textContent = 'せいかい！ すごいね ✨';
+        feedbackEl.textContent = '○ せいかい！';
         feedbackEl.className = 'feedback good';
-        document.querySelector('#check').disabled = true;
-        advanceTimer = setTimeout(() => { if (!practice.classList.contains('hidden') && locked) makeQuestion(); }, 850);
+        advanceTimer = setTimeout(() => { if (!practice.classList.contains('hidden') && locked) makeQuestion(); }, 650);
       } else {
-        feedbackEl.textContent = 'おしい！ もういちど やってみよう';
+        feedbackEl.textContent = `× せいかいは ${current.answer}`;
         feedbackEl.className = 'feedback try';
+        advanceTimer = setTimeout(() => {
+          if (practice.classList.contains('hidden') || !locked) return;
+          locked = false;
+          input = '';
+          updateAnswer();
+          document.querySelectorAll('.key').forEach(button => { button.disabled = false; button.classList.remove('chosen-answer'); });
+          feedbackEl.textContent = 'もういちど こたえてね';
+          feedbackEl.className = 'feedback try';
+        }, 750);
       }
     }
 
     document.querySelectorAll('[data-digit]').forEach(button => button.addEventListener('click', () => typeDigit(button.dataset.digit)));
     document.querySelector('[data-action="clear"]').addEventListener('click', () => { if (!locked) { input = ''; updateAnswer(); } });
     document.querySelector('[data-action="back"]').addEventListener('click', () => { if (!locked) { input = input.slice(0, -1); updateAnswer(); } });
-    document.querySelector('#check').addEventListener('click', checkAnswer);
-    document.querySelector('#newQuestion').addEventListener('click', makeQuestion);
     document.querySelector('#start').addEventListener('click', () => {
       solved = 0;
       document.querySelector('#solved').textContent = '0';
