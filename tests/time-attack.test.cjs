@@ -24,7 +24,7 @@ class Element {
 }
 const storage = new Map(); let now = Date.parse('2026-10-21T10:00:00+09:00');
 class FakeDate extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } }
-function boot(code = source) {
+function boot(code = source, search = "?debug=1") {
   const ids = Object.fromEntries([...html.matchAll(/id="([^"]+)"/g)].map(match => [match[1], new Element()]));
   ids.practice.classes.add('hidden'); ids.finish.classes.add('hidden'); ids.timeAttack.checked = true;
   const keys = Array.from({ length: 10 }, (_, n) => new Element({ digit: String(n) }));
@@ -34,7 +34,7 @@ function boot(code = source) {
   const groups = { '[data-op]': operations, '[data-mode]': modes, '[data-period]': periods, '.key': [...keys, ...utilities], '.key.utility': utilities, '[data-digit]': keys, '.debug-only': debug };
   const document = { hidden: false, events: {}, createElement: () => new Element(), querySelector: s => s === '.keypad' ? keypad : s === '[data-digit="1"]' ? keys[1] : ids[s.slice(1)] || utilities.find(el => s === `[data-action="${el.dataset.action}"]`), querySelectorAll: s => groups[s] || [], addEventListener(type, fn) { (this.events[type] ||= []).push(fn); } };
   const pending = new Map(); let sequence = 0;
-  const context = vm.createContext({ document, window: new Element(), Math, Date: FakeDate, crypto, performance: { now: () => now }, requestAnimationFrame: fn => fn(), setInterval: () => 999, clearInterval() {}, setTimeout: fn => { pending.set(++sequence, fn); return sequence; }, clearTimeout: id => pending.delete(id), localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) } });
+  const context = vm.createContext({ document, window: Object.assign(new Element(), { location: { search } }), URLSearchParams, Math, Date: FakeDate, crypto, performance: { now: () => now }, requestAnimationFrame: fn => fn(), setInterval: () => 999, clearInterval() {}, setTimeout: fn => { pending.set(++sequence, fn); return sequence; }, clearTimeout: id => pending.delete(id), localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) } });
   vm.runInContext(code, context);
   return { ids, keys, operations, modes, periods, document, debug, pending, state: expr => vm.runInContext(expr, context), flush() { assert.equal(pending.size, 1); const [id, fn] = pending.entries().next().value; pending.delete(id); fn(); } };
 }
@@ -69,5 +69,19 @@ app.operations[1].click(); app.ids.timeAttack.checked = true; assert.equal(app.s
 app = boot(); assert.equal(app.state('bestFor(selectedProfile(),"add").timeMs'), 28000); assert.equal(app.state('bestFor(selectedProfile(),"sub").timeMs'), 5500);
 app.ids.openParent.click(); app.ids.profileName.value = '別の子'; app.ids.addProfile.click(); app.ids.closeParent.click(); assert.equal(app.state('bestFor(selectedProfile())'), null);
 app.modes[1].click(); app.ids.start.click(); assert.equal(app.state('sessionTimed'), false); now += 1000; app.keys[app.state('current.answer')].click(); app.flush(); app.ids.stop.click(); assert.equal(app.state('bestFor(selectedProfile())'), null);
-const release = boot(source.replace('debug: true', 'debug: false')); release.ids.debugCelebrate.click(); assert(!release.ids.celebrationDialog.open); assert(release.debug.every(el => el.classes.has('hidden'))); assert(release.ids.appVersion.textContent.includes('おためし版'));
+const release = boot(source, ''); release.ids.debugCelebrate.click(); assert(!release.ids.celebrationDialog.open); assert(release.debug.every(el => el.classes.has('hidden'))); assert(release.ids.appVersion.textContent.includes('正式版'));
 console.log('PASS: 55 questions + review; first/faster/equal/slower best; celebrations; preview has no stored side effects; pause/resume and feedback timing; incomplete/untimed/random excluded; operation/child isolation; reload persistence; release debug switch.');
+
+for (const search of ['', '?debug=0', '?debug=false', '?debug', '?v=1.0']) {
+  const normal = boot(source, search);
+  assert.equal(normal.state('APP_CONFIG.debug'), false);
+  assert(normal.debug.every(el => el.classes.has('hidden')));
+}
+for (const search of ['?debug=1', '?v=1.0&debug=1']) {
+  const debugging = boot(source, search);
+  assert.equal(debugging.state('APP_CONFIG.debug'), true);
+  assert(debugging.debug.every(el => !el.classes.has('hidden')));
+  const before = JSON.stringify(debugging.state('learning')); debugging.ids.debugCelebrate.click();
+  assert(debugging.ids.celebrationDialog.open); assert.equal(JSON.stringify(debugging.state('learning')), before);
+}
+console.log('PASS: normal URL is release mode; only debug=1 enables preview; both URL modes share the existing learning records.');
