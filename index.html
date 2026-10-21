@@ -5,14 +5,14 @@
 【作成日時】2026-10-21
 【概要】子ども向け計算練習アプリ。1桁の足し算・引き算を電卓式ボタンで練習する。
 【使い方】ブラウザで開き、計算を選んで「練習スタート」。数字を押すとすぐに答え合わせ。
-【仕様】ランダム練習と全パターン練習を選択。全パターンは0を含む順序別55問を重複なく出題し、誤答を後で復習して全問正解で終了。途中終了可。進捗保存なし。読み上げ、音声入力、3つの数、マイナスの答えは未実装。
+【仕様】ランダム練習と全パターン練習を選択。全パターンは0を含む順序別55問を重複なく出題し、誤答時は問題・自分の答え・正解をポップアップ表示し、「わかった」で次へ。全パターンは誤答を後で復習して全問正解で終了。途中終了可。進捗保存なし。読み上げ、音声入力、3つの数、マイナスの答えは未実装。
 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8ff">
-    <title>けいさんチャレンジ v0.3</title>
+    <title>けいさんチャレンジ v0.4</title>
   <style>
     :root { color-scheme: light; --ink:#26334b; --muted:#71809a; --blue:#5c76ed; --purple:#8d68dc; --mint:#54c8a2; --pink:#ff8b9d; --paper:#fff; }
     * { box-sizing:border-box; }
@@ -63,6 +63,16 @@
     .done .emoji {font-size:58px;margin-bottom:12px;}
     .done h2 {margin:0 0 8px;font-size:24px;}
     .done p {margin:0;color:var(--muted);font-size:14px;line-height:1.6;}
+    .mistake-dialog { width:min(calc(100% - 28px),410px);max-height:calc(100dvh - 40px);overflow:auto;border:1px solid #eedbd5;border-radius:26px;padding:26px 22px;color:var(--ink);background:#fffaf6;box-shadow:0 18px 60px #26334b33;text-align:center; }
+    .mistake-dialog::backdrop { background:#26334b66; }
+    .mistake-dialog h2 { margin:0 0 10px;font-size:26px;color:#a5533e; }
+    .mistake-dialog .equation { font-size:36px;font-weight:900;margin:18px 0; }
+    .mistake-answers { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0; }
+    .mistake-answers div { border-radius:16px;background:white;border:1px solid #e7e5e0;padding:12px 5px;font-size:13px; }
+    .mistake-answers strong { display:block;font-size:36px;margin-top:4px; }
+    .wrong-value { color:#a52c3b; }
+    .correct-value { color:#11633e; }
+    button:focus-visible { outline:3px solid #435fd8;outline-offset:3px; }
     .hidden { display:none !important; }
     @media (max-width:380px) { body{padding:12px 10px 20px}.card{padding:18px}.key{min-height:53px} }
   </style>
@@ -70,7 +80,7 @@
 <body>
   <main class="app">
     <header>
-      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div class="version">VERSION 0.3 · おためし版</div></div></div>
+      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div class="version">VERSION 0.4 · おためし版</div></div></div>
       <div class="badge">1けた</div>
     </header>
 
@@ -85,7 +95,7 @@
         <button class="choice mode-choice" data-mode="all" aria-pressed="false">全パターンれんしゅう<small>ぜんぶ せいかいを めざそう</small></button>
         <button class="choice mode-choice" data-mode="random" aria-pressed="true">ランダムれんしゅう<small>すきなだけ やって おわろう</small></button>
       </div>
-      <p id="modeHint" class="hint mode-hint">すきなところで おわれるよ。まちがえたら、その場でもういちど。</p>
+      <p id="modeHint" class="hint mode-hint">すきなところで おわれるよ。まちがえたら、こたえを かくにんして 次へ。</p>
       <button id="start" class="start">れんしゅうスタート</button>
       <p class="tiny">いまは、くり上がり・くり下がりのない計算だよ。<br>全パターンは0をふくむ55問。2＋3と3＋2は別の問題だよ。<br>とちゅうで おわると、つぎは はじめからになるよ。</p>
     </section>
@@ -113,6 +123,17 @@
       <p id="finishSummary"></p>
       <button id="again" class="start">もういちど</button>
     </section>
+    <dialog id="mistakeDialog" class="mistake-dialog" aria-labelledby="mistakeTitle" aria-describedby="mistakeMessage">
+      <h2 id="mistakeTitle">ざんねん！</h2>
+      <p id="mistakeMessage" class="hint">どこを まちがえたか、かくにんしよう。</p>
+      <div id="mistakeProblem" class="equation"></div>
+      <div class="mistake-answers">
+        <div>きみの こたえ<strong id="mistakeInput" class="wrong-value"></strong></div>
+        <div>せいかい<strong id="mistakeCorrect" class="correct-value"></strong></div>
+      </div>
+      <p id="mistakeHint" class="hint"></p>
+      <button id="understood" class="start" autofocus>わかった</button>
+    </dialog>
   </main>
   <script>
     const setup = document.querySelector('#setup');
@@ -121,6 +142,7 @@
     const problemEl = document.querySelector('#problem');
     const answerEl = document.querySelector('#answer');
     const feedbackEl = document.querySelector('#feedback');
+    const mistakeDialog = document.querySelector('#mistakeDialog');
     let operation = 'add';
     let mode = 'random';
     let current = null;
@@ -142,7 +164,7 @@
       document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
       document.querySelector('#modeHint').textContent = mode === 'all'
         ? '55問をひととおり → まちがえた問題をふくしゅう → 全問せいかいでゴール！'
-        : 'すきなところで おわれるよ。まちがえたら、その場でもういちど。';
+        : 'すきなところで おわれるよ。まちがえたら、こたえを かくにんして 次へ。';
     }));
 
     function buildPool(op) {
@@ -202,6 +224,7 @@
 
     function endSession(completed = false) {
       clearTimeout(advanceTimer);
+      if (mistakeDialog.open) mistakeDialog.close();
       locked = true;
       practice.classList.add('hidden');
       finish.classList.remove('hidden');
@@ -246,16 +269,27 @@
       } else {
         feedbackEl.textContent = `× せいかいは ${current.answer}`;
         feedbackEl.className = 'feedback try';
-        if (mode === 'all') {
-          reviewQueue.push(current);
-          advanceTimer = setTimeout(() => { if (!practice.classList.contains('hidden') && locked) makeQuestion(); }, 1000);
-        } else {
-          advanceTimer = setTimeout(() => {
-            if (!practice.classList.contains('hidden') && locked) resetInput('もういちど こたえてね');
-          }, 750);
-        }
+        clearTimeout(advanceTimer);
+        if (mode === 'all') reviewQueue.push(current);
+        document.querySelector('#mistakeProblem').textContent = `${current.a} ${current.sign} ${current.b} ＝ ?`;
+        document.querySelector('#mistakeInput').textContent = input;
+        document.querySelector('#mistakeCorrect').textContent = current.answer;
+        document.querySelector('#mistakeHint').textContent = mode === 'all'
+          ? 'この問題は あとで もういちど れんしゅうするよ。'
+          : 'かくにんできたら、つぎの問題に すすもう。';
+        mistakeDialog.showModal();
       }
     }
+
+    mistakeDialog.addEventListener('cancel', event => event.preventDefault());
+    document.querySelector('#understood').addEventListener('click', () => {
+      if (!mistakeDialog.open) return;
+      mistakeDialog.close();
+      if (!practice.classList.contains('hidden')) {
+        makeQuestion();
+        if (!practice.classList.contains('hidden')) document.querySelector('[data-digit="1"]').focus();
+      }
+    });
 
     document.querySelectorAll('[data-digit]').forEach(button => button.addEventListener('click', () => typeDigit(button.dataset.digit)));
     document.querySelector('[data-action="clear"]').addEventListener('click', () => { if (!locked) { input = ''; updateAnswer(); } });
@@ -269,7 +303,7 @@
       reviewing = false;
       document.querySelector('#practiceHint').textContent = mode === 'all'
         ? '数字を押すとすぐに判定。まちがえた問題は、あとでふくしゅうするよ。'
-        : '数字を押すとすぐに判定。まちがえたら、同じ問題をもう一度！';
+        : 'まちがえたら、こたえを かくにん。「わかった」で次へすすむよ。';
       setup.classList.add('hidden'); finish.classList.add('hidden'); practice.classList.remove('hidden'); makeQuestion();
     });
     document.querySelector('#stop').addEventListener('click', () => endSession());
@@ -277,7 +311,7 @@
       finish.classList.add('hidden'); setup.classList.remove('hidden');
     });
     document.addEventListener('keydown', event => {
-      if (practice.classList.contains('hidden')) return;
+      if (practice.classList.contains('hidden') || mistakeDialog.open) return;
       if (/^\d$/.test(event.key)) typeDigit(event.key);
       else if (event.key === 'Backspace' && !locked) { input = input.slice(0, -1); updateAnswer(); }
       else if (event.key === 'Enter') checkAnswer();
