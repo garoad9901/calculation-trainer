@@ -12,7 +12,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8ff">
-    <title>けいさんチャレンジ v0.8</title>
+    <title>けいさんチャレンジ v1.0</title>
   <style>
     :root { color-scheme: light; --ink:#26334b; --muted:#71809a; --blue:#5c76ed; --purple:#8d68dc; --mint:#54c8a2; --pink:#ff8b9d; --paper:#fff; }
     * { box-sizing:border-box; }
@@ -155,6 +155,8 @@
     @keyframes confetti-fall { from{transform:translateY(-20px) rotate(0deg);opacity:1}to{transform:translateY(650px) rotate(600deg);opacity:.3} }
     @keyframes trophy-bounce { 0%{transform:scale(.5) rotate(-12deg)}65%{transform:scale(1.15) rotate(6deg)}100%{transform:scale(1) rotate(0)} }
     @media(prefers-reduced-motion:reduce) { .confetti span,.celebration-trophy { animation:none; }.confetti { display:none; } }
+    .share-qr { display:block;width:min(100%,240px);height:auto;margin:14px auto;border:1px solid #e5e9f3;border-radius:10px;background:white; }
+    .share-url { display:block;color:#5265b9;overflow-wrap:anywhere;font-size:12px;line-height:1.7; }
     .hidden { display:none !important; }
     @media (max-width:380px) { body{padding:12px 10px 20px}.card{padding:18px}.key{min-height:53px} }
   </style>
@@ -162,7 +164,7 @@
 <body>
   <main class="app">
     <header>
-      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div id="appVersion" class="version">VERSION 0.8 · デバッグ版</div></div></div>
+      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div id="appVersion" class="version">VERSION 1.0 · 正式版</div></div></div>
       <div class="badge">1けた</div>
     </header>
 
@@ -228,6 +230,11 @@
       </div>
       <p id="reportRange" class="hint"></p>
       <div id="reportContent"></div>
+      <details class="profile-settings"><summary>正式版の共有QRコード</summary>
+        <p class="hint">別の端末では、このQRコードを読み取って開けます。</p>
+        <img class="share-qr" src="./assets/release-qr.svg" width="240" height="240" alt="けいさんチャレンジ 正式版を開くQRコード">
+        <a class="share-url" href="https://garoad9901.github.io/calculation-trainer/" target="_blank" rel="noopener">https://garoad9901.github.io/calculation-trainer/</a>
+      </details>
       <details class="profile-settings debug-only hidden"><summary>デバッグ用のお祝い確認</summary><p class="hint">演出だけを表示します。学習実績と自己ベストは変わりません。</p><button id="parentDebugCelebrate" class="secondary">🎉 お祝い画面を確認</button></details>
       <details class="profile-settings"><summary>子どもの追加・名前の変更</summary>
         <label for="profileName">名前（20文字まで）</label><input id="profileName" maxlength="20" placeholder="なまえ" autocomplete="off">
@@ -265,8 +272,8 @@
     </dialog>
   </main>
   <script>
-    const APP_CONFIG = Object.freeze({ debug: true }); // リリース時は false にする。
-    const APP_VERSION = '0.8';
+    const APP_CONFIG = Object.freeze({ debug: new URLSearchParams(window.location.search).get('debug') === '1' }); // ?debug=1 のときだけ確認機能を表示。
+    const APP_VERSION = '1.0';
     const setup = document.querySelector('#setup');
     const practice = document.querySelector('#practice');
     const finish = document.querySelector('#finish');
@@ -775,7 +782,7 @@
     document.querySelector('#closeCelebration').addEventListener('click', () => celebrationDialog.close());
     celebrationDialog.addEventListener('close', () => startClock());
     document.querySelectorAll('.debug-only').forEach(element => element.classList.toggle('hidden', !APP_CONFIG.debug));
-    document.querySelector('#appVersion').textContent = `VERSION ${APP_VERSION} · ${APP_CONFIG.debug ? 'デバッグ版' : 'おためし版'}`;
+    document.querySelector('#appVersion').textContent = `VERSION ${APP_VERSION} · ${APP_CONFIG.debug ? 'デバッグ版' : '正式版'}`;
     document.title = `けいさんチャレンジ v${APP_VERSION}${APP_CONFIG.debug ? '（デバッグ）' : ''}`;
     refreshProfiles(); storageNotice();
 
