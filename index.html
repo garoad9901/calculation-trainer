@@ -5,14 +5,14 @@
 【作成日時】2026-10-21
 【概要】子ども向け計算練習アプリ。1桁の足し算・引き算を電卓式ボタンで練習する。
 【使い方】ブラウザで開き、計算を選んで「練習スタート」。数字を押すとすぐに答え合わせ。
-【仕様】ランダム練習と全パターン練習を選択。全パターンは0を含む順序別55問を重複なく出題し、誤答時は問題・自分の答え・正解をポップアップ表示し、「わかった」で次へ。全パターンは誤答を後で復習して全問正解で終了。途中終了可。進捗保存なし。読み上げ、音声入力、3つの数、マイナスの答えは未実装。
+【仕様】ランダム練習と全パターン練習を選択。全パターンは0を含む順序別55問を重複なく出題し、誤答時は問題・自分の答え・正解をポップアップ表示し、「わかった」で次へ。全パターンは誤答を後で復習して全問正解で終了。途中終了可。子ども別の学習実績を端末に保存し、保護者画面で今日・7日・30日の記録を表示。途中の問題進捗は保存なし。読み上げ、音声入力、3つの数、マイナスの答えは未実装。
 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8ff">
-    <title>けいさんチャレンジ v0.4</title>
+    <title>けいさんチャレンジ v0.5</title>
   <style>
     :root { color-scheme: light; --ink:#26334b; --muted:#71809a; --blue:#5c76ed; --purple:#8d68dc; --mint:#54c8a2; --pink:#ff8b9d; --paper:#fff; }
     * { box-sizing:border-box; }
@@ -73,6 +73,36 @@
     .wrong-value { color:#a52c3b; }
     .correct-value { color:#11633e; }
     button:focus-visible { outline:3px solid #435fd8;outline-offset:3px; }
+    select,input { font:inherit;color:var(--ink);border:1px solid #cbd5e7;border-radius:10px;background:white;padding:9px;min-width:0; }
+    .toolbar { display:flex;align-items:center;gap:9px;margin-bottom:12px;font-size:13px; }
+    .toolbar select { flex:1;max-width:220px; }
+    .parent-open { flex:none;color:#5265b9;font-size:12px; }
+    .keypad.single-digit [data-digit="0"] { grid-column:2; }
+    .report-dialog { width:min(calc(100% - 24px),540px);max-height:calc(100dvh - 28px);overflow:auto;overscroll-behavior:contain;border:1px solid #e1e7f5;border-radius:24px;background:#fff;color:var(--ink);padding:22px;box-shadow:0 18px 60px #26334b33; }
+    .report-dialog::backdrop { background:#26334b66; }
+    .report-dialog h2 { font-size:20px;margin:0 0 16px; }
+    .report-dialog h3 { font-size:15px;margin:20px 0 9px; }
+    .report-profile { display:flex;align-items:center;gap:9px;font-size:13px; }
+    .report-profile select { flex:1; }
+    .report-tabs { display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:15px 0; }
+    .report-tabs .choice { min-height:42px;border-radius:12px;font-size:13px; }
+    .report-metrics { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px; }
+    .metric { background:#f3f6ff;border:1px solid #e6ebf8;border-radius:14px;padding:12px; }
+    .metric small { color:var(--muted);font-size:12px; }
+    .metric strong { display:block;font-size:23px;margin-top:4px; }
+    .praise { background:#f0faf3;border:1px solid #d2ebdb;border-radius:14px;padding:14px;font-size:14px;line-height:1.7; }
+    .trend { max-height:300px;overflow:auto; }
+    .trend-row { display:grid;grid-template-columns:44px minmax(30px,1fr) 106px;gap:8px;align-items:center;font-size:12px;margin:10px 0; }
+    .trend-track { height:13px;background:#edf0f7;border-radius:5px;overflow:hidden; }
+    .trend-bar { height:100%;background:#8495ef;border-radius:5px; }
+    .trend-row span:last-child { text-align:right;font-variant-numeric:tabular-nums; }
+    .report-list { margin:0;padding-left:22px;font-size:13px;line-height:1.9; }
+    .profile-settings { margin-top:18px;border-top:1px solid #e8ecf7;padding-top:12px; }
+    .profile-settings summary { cursor:pointer;font-size:13px;font-weight:700; }
+    .profile-settings label { display:block;font-size:12px;margin:12px 0 7px; }
+    .profile-settings input { width:100%; }
+    .profile-settings .actions { margin-top:8px; }
+    .storage-warning { color:#a52c3b;font-size:12px;margin:0 0 12px; }
     .hidden { display:none !important; }
     @media (max-width:380px) { body{padding:12px 10px 20px}.card{padding:18px}.key{min-height:53px} }
   </style>
@@ -80,10 +110,15 @@
 <body>
   <main class="app">
     <header>
-      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div class="version">VERSION 0.4 · おためし版</div></div></div>
+      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div class="version">VERSION 0.5 · おためし版</div></div></div>
       <div class="badge">1けた</div>
     </header>
 
+    <div class="toolbar">
+      <label for="learner">なまえ</label><select id="learner" aria-label="練習する子ども"></select>
+      <button id="openParent" class="secondary parent-open">保護者向け</button>
+    </div>
+    <p id="storageWarning" class="storage-warning hidden" role="status"></p>
     <section id="setup" class="card setup">
       <h2>きょうの れんしゅう</h2>
       <p class="hint">やりたい計算をえらんでね。いつでも「おわる」を押せるよ。</p>
@@ -92,10 +127,10 @@
         <button class="choice" data-op="sub" aria-pressed="false"><span class="symbol">−</span>ひきざん</button>
       </div>
       <div class="choice-row" role="group" aria-label="練習のしかた">
-        <button class="choice mode-choice" data-mode="all" aria-pressed="false">全パターンれんしゅう<small>ぜんぶ せいかいを めざそう</small></button>
-        <button class="choice mode-choice" data-mode="random" aria-pressed="true">ランダムれんしゅう<small>すきなだけ やって おわろう</small></button>
+        <button class="choice mode-choice" data-mode="all" aria-pressed="true">全パターンれんしゅう<small>ぜんぶ せいかいを めざそう</small></button>
+        <button class="choice mode-choice" data-mode="random" aria-pressed="false">ランダムれんしゅう<small>すきなだけ やって おわろう</small></button>
       </div>
-      <p id="modeHint" class="hint mode-hint">すきなところで おわれるよ。まちがえたら、こたえを かくにんして 次へ。</p>
+      <p id="modeHint" class="hint mode-hint">55問をひととおり → まちがえた問題をふくしゅう → 全問せいかいでゴール！</p>
       <button id="start" class="start">れんしゅうスタート</button>
       <p class="tiny">いまは、くり上がり・くり下がりのない計算だよ。<br>全パターンは0をふくむ55問。2＋3と3＋2は別の問題だよ。<br>とちゅうで おわると、つぎは はじめからになるよ。</p>
     </section>
@@ -108,11 +143,11 @@
         <div id="answer" class="answer-box empty" aria-label="入力した答え">?</div>
         <div id="feedback" class="feedback" aria-live="polite">こたえを いれてね</div>
       </div>
-      <div class="keypad" aria-label="電卓式入力">
+      <div class="keypad single-digit" aria-label="電卓式入力">
         <button class="key" data-digit="1">1</button><button class="key" data-digit="2">2</button><button class="key" data-digit="3">3</button>
         <button class="key" data-digit="4">4</button><button class="key" data-digit="5">5</button><button class="key" data-digit="6">6</button>
         <button class="key" data-digit="7">7</button><button class="key" data-digit="8">8</button><button class="key" data-digit="9">9</button>
-        <button class="key utility" data-action="clear">けす</button><button class="key" data-digit="0">0</button><button class="key utility" data-action="back">⌫</button>
+        <button class="key utility hidden" data-action="clear">けす</button><button class="key" data-digit="0">0</button><button class="key utility hidden" data-action="back">⌫</button>
       </div>
       <div class="actions"><button id="stop" class="secondary stop">おわる</button></div>
       <p id="practiceHint" class="tiny"></p>
@@ -123,6 +158,24 @@
       <p id="finishSummary"></p>
       <button id="again" class="start">もういちど</button>
     </section>
+    <dialog id="parentDialog" class="report-dialog" aria-labelledby="reportTitle">
+      <h2 id="reportTitle">保護者向け 学習レポート</h2>
+      <div class="report-profile"><label for="reportProfile">子ども</label><select id="reportProfile"></select></div>
+      <div class="report-tabs" role="group" aria-label="集計期間">
+        <button class="choice" data-period="today" aria-pressed="true">今日</button>
+        <button class="choice" data-period="week" aria-pressed="false">1週間</button>
+        <button class="choice" data-period="month" aria-pressed="false">1か月</button>
+      </div>
+      <p id="reportRange" class="hint"></p>
+      <div id="reportContent"></div>
+      <details class="profile-settings"><summary>子どもの追加・名前の変更</summary>
+        <label for="profileName">名前（20文字まで）</label><input id="profileName" maxlength="20" placeholder="なまえ" autocomplete="off">
+        <div class="actions"><button id="addProfile" class="secondary">追加</button><button id="renameProfile" class="secondary">名前を変更</button></div>
+        <p id="profileMessage" class="hint" role="status"></p>
+      </details>
+      <p class="tiny">記録はこの端末のブラウザに保存します。別の端末・ブラウザとは共有されません。<br>今回のバージョンでの練習から記録します。</p>
+      <button id="closeParent" class="start">とじる</button>
+    </dialog>
     <dialog id="mistakeDialog" class="mistake-dialog" aria-labelledby="mistakeTitle" aria-describedby="mistakeMessage">
       <h2 id="mistakeTitle">ざんねん！</h2>
       <p id="mistakeMessage" class="hint">どこを まちがえたか、かくにんしよう。</p>
@@ -144,7 +197,7 @@
     const feedbackEl = document.querySelector('#feedback');
     const mistakeDialog = document.querySelector('#mistakeDialog');
     let operation = 'add';
-    let mode = 'random';
+    let mode = 'all';
     let current = null;
     let input = '';
     let solved = 0;
@@ -154,6 +207,218 @@
     let queue = [];
     let reviewQueue = [];
     let reviewing = false;
+    let sessionRunning = false;
+    let sessionProfileId = null;
+    let clockStartedAt = null;
+    let questionSeconds = 0;
+
+    const STORAGE_KEY = 'calculation-trainer-learning-v1';
+    const parentDialog = document.querySelector('#parentDialog');
+    let reportPeriod = 'today';
+    let reportProfileId = null;
+    let storageFailed = false;
+
+    function localDay(date = new Date()) {
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    }
+    function freshLearning() {
+      return { version: 1, selectedId: 'child-1', profiles: [{ id: 'child-1', name: 'こども1', days: {}, missed: {} }] };
+    }
+    function count(value) { return Number.isFinite(value) && value >= 0 ? value : 0; }
+    function loadLearning() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return freshLearning();
+        const data = JSON.parse(raw);
+        if (data.version !== 1 || !Array.isArray(data.profiles) || !data.profiles.length) throw Error('Invalid history');
+        const seen = new Set();
+        for (const profile of data.profiles) {
+          if (!profile || typeof profile.id !== 'string' || seen.has(profile.id) || typeof profile.name !== 'string' || !profile.days || !profile.missed) throw Error('Invalid profile');
+          seen.add(profile.id);
+          for (const [date, day] of Object.entries(profile.days)) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !day || !day.problems) throw Error('Invalid day');
+            for (const key of ['attempts', 'correct', 'seconds', 'completed', 'improved']) day[key] = count(day[key]);
+            for (const problem of Object.values(day.problems)) {
+              if (!problem || typeof problem !== 'object') throw Error('Invalid problem');
+              problem.attempts = count(problem.attempts); problem.correct = count(problem.correct);
+            }
+          }
+        }
+        if (!seen.has(data.selectedId)) data.selectedId = data.profiles[0].id;
+        return data;
+      } catch {
+        storageFailed = true;
+        return freshLearning();
+      }
+    }
+    const learning = loadLearning();
+    function storageNotice() {
+      const message = document.querySelector('#storageWarning');
+      message.classList.toggle('hidden', !storageFailed);
+      message.textContent = storageFailed ? '記録を読み書きできません。この画面での練習はできますが、記録が残らない場合があります。' : '';
+    }
+    function saveLearning() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(learning)); storageFailed = false; }
+      catch { storageFailed = true; }
+      storageNotice();
+    }
+    function selectedProfile() { return learning.profiles.find(p => p.id === learning.selectedId); }
+    function activeSessionProfile() { return learning.profiles.find(p => p.id === sessionProfileId) || selectedProfile(); }
+    function dayRecord(profile, date = localDay()) {
+      if (!profile.days[date]) profile.days[date] = { attempts: 0, correct: 0, seconds: 0, completed: 0, improved: 0, problems: {} };
+      return profile.days[date];
+    }
+    function startClock() {
+      if (sessionRunning && !locked && !document.hidden && !parentDialog.open && clockStartedAt === null) clockStartedAt = Date.now();
+    }
+    function pauseClock() {
+      if (clockStartedAt === null) return;
+      let cursor = clockStartedAt;
+      const now = Date.now();
+      const seconds = Math.min(Math.max(0, (now - cursor) / 1000), Math.max(0, 120 - questionSeconds));
+      clockStartedAt = null;
+      questionSeconds += seconds;
+      const end = cursor + seconds * 1000;
+      while (cursor < end) {
+        const midnight = new Date(cursor); midnight.setHours(24, 0, 0, 0);
+        const next = Math.min(end, midnight.getTime());
+        dayRecord(activeSessionProfile(), localDay(new Date(cursor))).seconds += (next - cursor) / 1000;
+        cursor = next;
+      }
+      if (seconds > 0) saveLearning();
+    }
+    function recordAnswer(correct) {
+      const profile = activeSessionProfile();
+      const day = dayRecord(profile);
+      const key = `${operation}:${current.a}:${current.b}`;
+      const problem = day.problems[key] || (day.problems[key] = { attempts: 0, correct: 0 });
+      day.attempts++; problem.attempts++;
+      if (correct) {
+        day.correct++; problem.correct++;
+        if (profile.missed[key]) { day.improved++; delete profile.missed[key]; }
+      } else profile.missed[key] = true;
+      saveLearning();
+    }
+    function refreshProfiles() {
+      for (const [selector, value] of [['#learner', learning.selectedId], ['#reportProfile', reportProfileId || learning.selectedId]]) {
+        const select = document.querySelector(selector);
+        select.replaceChildren();
+        for (const profile of learning.profiles) {
+          const option = document.createElement('option'); option.value = profile.id; option.textContent = profile.name; select.append(option);
+        }
+        select.value = value;
+      }
+    }
+    function periodDates(period, now = new Date()) {
+      const days = period === 'today' ? 1 : period === 'week' ? 7 : 30;
+      const dates = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date(now); date.setHours(12, 0, 0, 0); date.setDate(date.getDate() - i); dates.push(localDay(date));
+      }
+      return dates;
+    }
+    function summarize(profile, dates) {
+      const totals = { attempts: 0, correct: 0, seconds: 0, completed: 0, improved: 0, days: 0, problems: {} };
+      for (const date of dates) {
+        const day = profile.days[date];
+        if (!day) continue;
+        for (const key of ['attempts', 'correct', 'seconds', 'completed', 'improved']) totals[key] += day[key];
+        if (day.attempts) totals.days++;
+        for (const [key, p] of Object.entries(day.problems)) {
+          const problem = totals.problems[key] || (totals.problems[key] = { attempts: 0, correct: 0 });
+          problem.attempts += p.attempts; problem.correct += p.correct;
+        }
+      }
+      totals.rate = totals.attempts ? Math.round(totals.correct / totals.attempts * 100) : null;
+      return totals;
+    }
+    function timeLabel(seconds) {
+      if (seconds < 60) return `${Math.floor(seconds)}秒`;
+      return `${Math.floor(seconds / 60)}分${Math.floor(seconds % 60)}秒`;
+    }
+    function appendText(parent, tag, text, className = '') {
+      const element = document.createElement(tag); element.textContent = text; element.className = className; parent.append(element); return element;
+    }
+    function problemLabel(key) {
+      const [op, a, b] = key.split(':'); return `${a} ${op === 'add' ? '＋' : '−'} ${b}`;
+    }
+    function renderParent() {
+      const profile = learning.profiles.find(p => p.id === reportProfileId) || selectedProfile();
+      const dates = periodDates(reportPeriod);
+      const totals = summarize(profile, dates);
+      document.querySelector('#reportRange').textContent = `${profile.name} · ${dates[0]} 〜 ${dates.at(-1)}`;
+      document.querySelectorAll('[data-period]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.period === reportPeriod)));
+      const content = document.querySelector('#reportContent'); content.replaceChildren();
+      appendText(content, 'h3', '取り組みの記録');
+      const metrics = appendText(content, 'div', '', 'report-metrics');
+      for (const [label, value] of [['回答数', `${totals.attempts}問`], ['正答率', totals.rate === null ? '—' : `${totals.rate}%`], ['練習時間（目安）', timeLabel(totals.seconds)], ['練習日数', `${totals.days}日`], ['やり直して正解', `${totals.improved}回`], ['全パターン完了', `${totals.completed}回`]]) {
+        const metric = appendText(metrics, 'div', '', 'metric'); appendText(metric, 'small', label); appendText(metric, 'strong', value);
+      }
+      appendText(content, 'p', '正答率は復習を含む全回答に対する割合です。「やり直して正解」は、以前間違えた問題に再び正解した回数です。', 'tiny');
+      appendText(content, 'h3', '褒めポイント');
+      let praise = totals.attempts ? `${totals.attempts}問に取り組みました。挑戦したことを褒めてあげてください。` : 'この期間はまだ回答の記録がありません。練習すると、ここに頑張りが表示されます。';
+      if (totals.improved) praise = `間違えた問題にも再挑戦し、${totals.improved}回正解できました。「考え直せたね！」と声をかけてみてください。`;
+      if (totals.completed) praise = `全パターンを${totals.completed}回やり切りました！ 最後まで取り組めた頑張りを褒めてあげてください。`;
+      if (totals.days >= 3 && !totals.completed && !totals.improved) praise = `${totals.days}日、計算に取り組めました。コツコツ続けられていることを褒めてあげてください。`;
+      appendText(content, 'p', praise, 'praise');
+      if (reportPeriod !== 'today') {
+        appendText(content, 'h3', reportPeriod === 'week' ? '1週間の推移（今日を含む7日間）' : '1か月の推移（今日を含む30日間）');
+        const trend = appendText(content, 'div', '', 'trend');
+        const max = Math.max(1, ...dates.map(date => profile.days[date]?.attempts || 0));
+        for (const date of dates) {
+          const day = profile.days[date]; const attempts = day?.attempts || 0;
+          const row = appendText(trend, 'div', '', 'trend-row'); appendText(row, 'span', `${Number(date.slice(5, 7))}/${Number(date.slice(8))}`);
+          const track = appendText(row, 'div', '', 'trend-track'); track.setAttribute('aria-hidden', 'true');
+          const bar = appendText(track, 'div', '', 'trend-bar'); bar.style.width = `${attempts / max * 100}%`;
+          appendText(row, 'span', `${attempts}問 · ${attempts ? Math.round(day.correct / attempts * 100) + '%' : '—'}`);
+        }
+      }
+      appendText(content, 'h3', '計算ごとの取り組み');
+      const operations = appendText(content, 'ul', '', 'report-list');
+      for (const [op, label] of [['add', 'たしざん'], ['sub', 'ひきざん']]) {
+        const problems = Object.entries(totals.problems).filter(([key]) => key.startsWith(op + ':')).map(([, p]) => p);
+        const n = problems.reduce((sum, p) => sum + p.attempts, 0), correct = problems.reduce((sum, p) => sum + p.correct, 0);
+        appendText(operations, 'li', `${label}：${n}問 / 正答率 ${n ? Math.round(correct / n * 100) + '%' : '—'}`);
+      }
+      appendText(content, 'h3', '間違えた問題（多い順・最大5問）');
+      const mistakes = Object.entries(totals.problems).filter(([, p]) => p.attempts > p.correct).sort((a, b) => (b[1].attempts - b[1].correct) - (a[1].attempts - a[1].correct)).slice(0, 5);
+      if (!mistakes.length) appendText(content, 'p', totals.attempts ? 'この期間に間違えた問題はありません。' : '練習後に表示します。', 'hint');
+      else {
+        const list = appendText(content, 'ul', '', 'report-list');
+        for (const [key, p] of mistakes) appendText(list, 'li', `${problemLabel(key)}：間違い ${p.attempts - p.correct}回 / 正解 ${p.correct}回`);
+      }
+      appendText(content, 'p', '練習時間は問題を考えている時間の目安です。画面を離れた時間とポップアップ・保護者画面の表示中は除き、1問につき最大2分で集計します。', 'tiny');
+    }
+    document.querySelector('#learner').addEventListener('change', event => {
+      if (sessionRunning) { event.target.value = learning.selectedId; return; }
+      learning.selectedId = event.target.value; saveLearning();
+    });
+    document.querySelector('#openParent').addEventListener('click', () => {
+      pauseClock(); reportPeriod = 'today'; reportProfileId = learning.selectedId; refreshProfiles(); renderParent(); parentDialog.showModal();
+    });
+    parentDialog.addEventListener('close', () => startClock());
+    document.querySelector('#closeParent').addEventListener('click', () => parentDialog.close());
+    document.querySelector('#reportProfile').addEventListener('change', event => { reportProfileId = event.target.value; renderParent(); });
+    document.querySelectorAll('[data-period]').forEach(button => button.addEventListener('click', () => { reportPeriod = button.dataset.period; renderParent(); }));
+    function editProfile(add) {
+      const input = document.querySelector('#profileName'); const name = input.value.trim().slice(0, 20);
+      if (!name) { document.querySelector('#profileMessage').textContent = '名前を入力してください。'; input.focus(); return; }
+      if (add) {
+        const profile = { id: 'child-' + crypto.randomUUID(), name, days: {}, missed: {} };
+        learning.profiles.push(profile); reportProfileId = profile.id;
+        if (!sessionRunning) learning.selectedId = profile.id;
+      } else {
+        const profile = learning.profiles.find(p => p.id === reportProfileId); if (profile) profile.name = name;
+      }
+      saveLearning(); refreshProfiles(); renderParent(); input.value = '';
+      document.querySelector('#profileMessage').textContent = add ? '子どもを追加しました。' : '名前を変更しました。';
+    }
+    document.querySelector('#addProfile').addEventListener('click', () => editProfile(true));
+    document.querySelector('#renameProfile').addEventListener('click', () => editProfile(false));
+    document.addEventListener('visibilitychange', () => { if (document.hidden) pauseClock(); else startClock(); });
+    window.addEventListener('pagehide', () => pauseClock());
+    window.addEventListener('pageshow', () => startClock());
+    refreshProfiles(); storageNotice();
 
     document.querySelectorAll('[data-op]').forEach(button => button.addEventListener('click', () => {
       operation = button.dataset.op;
@@ -198,10 +463,15 @@
     function resetInput(message = 'こたえを いれてね') {
       input = '';
       locked = false;
+      questionSeconds = 0;
       document.querySelectorAll('.key').forEach(button => { button.disabled = false; button.classList.remove('chosen-answer'); });
       feedbackEl.textContent = message;
       feedbackEl.className = 'feedback';
       updateAnswer();
+      const singleDigit = String(current.answer).length === 1;
+      document.querySelector('.keypad').classList.toggle('single-digit', singleDigit);
+      document.querySelectorAll('.key.utility').forEach(button => button.classList.toggle('hidden', singleDigit));
+      startClock();
     }
 
     function makeQuestion() {
@@ -224,6 +494,11 @@
 
     function endSession(completed = false) {
       clearTimeout(advanceTimer);
+      pauseClock();
+      completed = completed || (mode === 'all' && solved === pool.length);
+      if (sessionRunning && completed) { dayRecord(activeSessionProfile()).completed += 1; saveLearning(); }
+      sessionRunning = false;
+      document.querySelector('#learner').disabled = false;
       if (mistakeDialog.open) mistakeDialog.close();
       locked = true;
       practice.classList.add('hidden');
@@ -255,6 +530,8 @@
         }
         return;
       }
+      pauseClock();
+      recordAnswer(Number(input) === current.answer);
       locked = true;
       document.querySelectorAll('.key').forEach(button => {
         button.disabled = true;
@@ -296,6 +573,9 @@
     document.querySelector('[data-action="back"]').addEventListener('click', () => { if (!locked) { input = input.slice(0, -1); updateAnswer(); } });
     document.querySelector('#start').addEventListener('click', () => {
       solved = 0;
+      sessionRunning = true;
+      sessionProfileId = learning.selectedId;
+      document.querySelector('#learner').disabled = true;
       clearTimeout(advanceTimer);
       pool = buildPool(operation);
       queue = mode === 'all' ? shuffled(pool) : [];
@@ -311,7 +591,7 @@
       finish.classList.add('hidden'); setup.classList.remove('hidden');
     });
     document.addEventListener('keydown', event => {
-      if (practice.classList.contains('hidden') || mistakeDialog.open) return;
+      if (practice.classList.contains('hidden') || mistakeDialog.open || parentDialog.open) return;
       if (/^\d$/.test(event.key)) typeDigit(event.key);
       else if (event.key === 'Backspace' && !locked) { input = input.slice(0, -1); updateAnswer(); }
       else if (event.key === 'Enter') checkAnswer();
