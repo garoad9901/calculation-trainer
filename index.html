@@ -5,14 +5,14 @@
 【作成日時】2026-10-21
 【概要】子ども向け計算練習アプリ。1桁の足し算・引き算を電卓式ボタンで練習する。
 【使い方】ブラウザで開き、計算を選んで「練習スタート」。数字を押すとすぐに答え合わせ。
-【仕様】誤答後は同じ問題を再挑戦。ローカル保存なし。読み上げ、音声入力、3つの数、全問正解モード、マイナスの答えは未実装。
+【仕様】ランダム練習と全パターン練習を選択。全パターンは0を含む順序別55問を重複なく出題し、誤答を後で復習して全問正解で終了。途中終了可。進捗保存なし。読み上げ、音声入力、3つの数、マイナスの答えは未実装。
 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8ff">
-    <title>けいさんチャレンジ v0.2</title>
+    <title>けいさんチャレンジ v0.3</title>
   <style>
     :root { color-scheme: light; --ink:#26334b; --muted:#71809a; --blue:#5c76ed; --purple:#8d68dc; --mint:#54c8a2; --pink:#ff8b9d; --paper:#fff; }
     * { box-sizing:border-box; }
@@ -32,6 +32,10 @@
     .choice-row { display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:17px; }
     .choice { min-height:55px;border:2px solid #e8ecf7;background:#fff;border-radius:16px;font-weight:800;transition:.15s; }
     .choice[aria-pressed="true"] { border-color:var(--blue);background:#f0f3ff;color:#435fd8;box-shadow:0 3px 10px #5c76ed1c; }
+    .choice small { display:block;font-size:11px;font-weight:500;line-height:1.5;margin-top:5px; }
+    .mode-choice { padding:12px 6px; }
+    .mode-hint { margin-top:12px; }
+    .session-info { margin:0 2px 10px; }
     .choice .symbol { font-size:21px;vertical-align:-2px;margin-right:5px; }
     .start { width:100%;margin-top:16px;border:0;border-radius:17px;background:linear-gradient(100deg,var(--blue),var(--purple));color:white;padding:15px;font-weight:900;font-size:16px;box-shadow:0 7px 16px #7368d533; }
     .start:active,.key:active,.choice:active { transform:translateY(1px) scale(.99); }
@@ -66,7 +70,7 @@
 <body>
   <main class="app">
     <header>
-      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div class="version">VERSION 0.2 · おためし版</div></div></div>
+      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div class="version">VERSION 0.3 · おためし版</div></div></div>
       <div class="badge">1けた</div>
     </header>
 
@@ -77,12 +81,18 @@
         <button class="choice" data-op="add" aria-pressed="true"><span class="symbol">＋</span>たしざん</button>
         <button class="choice" data-op="sub" aria-pressed="false"><span class="symbol">−</span>ひきざん</button>
       </div>
+      <div class="choice-row" role="group" aria-label="練習のしかた">
+        <button class="choice mode-choice" data-mode="all" aria-pressed="false">全パターンれんしゅう<small>ぜんぶ せいかいを めざそう</small></button>
+        <button class="choice mode-choice" data-mode="random" aria-pressed="true">ランダムれんしゅう<small>すきなだけ やって おわろう</small></button>
+      </div>
+      <p id="modeHint" class="hint mode-hint">すきなところで おわれるよ。まちがえたら、その場でもういちど。</p>
       <button id="start" class="start">れんしゅうスタート</button>
-      <p class="tiny">いまは、くり上がり・くり下がりのない計算だよ。</p>
+      <p class="tiny">いまは、くり上がり・くり下がりのない計算だよ。<br>全パターンは0をふくむ55問。2＋3と3＋2は別の問題だよ。<br>とちゅうで おわると、つぎは はじめからになるよ。</p>
     </section>
 
     <section id="practice" class="hidden">
-      <div class="stage"><div class="stage-name">🌱 くり上がり・くり下がりなし</div><div class="progress"><span id="solved">0</span>もん せいかい</div></div>
+      <div class="stage"><div class="stage-name">🌱 くり上がり・くり下がりなし</div><div class="progress"><span id="progressText">0もん せいかい</span></div></div>
+      <p id="sessionInfo" class="hint session-info"></p>
       <div class="card problem-card">
         <div id="problem" class="problem" aria-live="polite">3 ＋ 4 ＝ ?</div>
         <div id="answer" class="answer-box empty" aria-label="入力した答え">?</div>
@@ -95,12 +105,12 @@
         <button class="key utility" data-action="clear">けす</button><button class="key" data-digit="0">0</button><button class="key utility" data-action="back">⌫</button>
       </div>
       <div class="actions"><button id="stop" class="secondary stop">おわる</button></div>
-      <p class="tiny">数字を押すとすぐに判定するよ。まちがえたら、同じ問題をもう一度！</p>
+      <p id="practiceHint" class="tiny"></p>
     </section>
 
     <section id="finish" class="card done hidden">
-      <div class="emoji">🌟</div><h2>よくがんばったね！</h2>
-      <p>きょうは <strong id="finalCount">0</strong> もん せいかい！<br>また いつでも れんしゅうしよう。</p>
+      <div class="emoji">🌟</div><h2 id="finishTitle">よくがんばったね！</h2>
+      <p id="finishSummary"></p>
       <button id="again" class="start">もういちど</button>
     </section>
   </main>
@@ -112,36 +122,94 @@
     const answerEl = document.querySelector('#answer');
     const feedbackEl = document.querySelector('#feedback');
     let operation = 'add';
+    let mode = 'random';
     let current = null;
     let input = '';
     let solved = 0;
-    let locked = false;
+    let locked = true;
     let advanceTimer = null;
+    let pool = [];
+    let queue = [];
+    let reviewQueue = [];
+    let reviewing = false;
 
-    document.querySelectorAll('.choice').forEach(button => button.addEventListener('click', () => {
+    document.querySelectorAll('[data-op]').forEach(button => button.addEventListener('click', () => {
       operation = button.dataset.op;
-      document.querySelectorAll('.choice').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      document.querySelectorAll('[data-op]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    }));
+    document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+      mode = button.dataset.mode;
+      document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+      document.querySelector('#modeHint').textContent = mode === 'all'
+        ? '55問をひととおり → まちがえた問題をふくしゅう → 全問せいかいでゴール！'
+        : 'すきなところで おわれるよ。まちがえたら、その場でもういちど。';
     }));
 
-    function makeQuestion() {
-      clearTimeout(advanceTimer);
-      let a, b;
-      if (operation === 'add') {
-        a = Math.floor(Math.random() * 10);
-        b = Math.floor(Math.random() * (10 - a)); // a+b は9以下。くり上がりなし。
-        current = { a, b, answer: a + b, sign: '+' };
-      } else {
-        a = Math.floor(Math.random() * 10);
-        b = Math.floor(Math.random() * (a + 1)); // a>=b。1けたなのでくり下がりなし。
-        current = { a, b, answer: a - b, sign: '−' };
+    function buildPool(op) {
+      const questions = [];
+      for (let a = 0; a <= 9; a++) {
+        for (let b = 0; b <= 9; b++) {
+          if (op === 'add' && a + b <= 9) questions.push({ a, b, answer: a + b, sign: '+' });
+          if (op === 'sub' && a >= b) questions.push({ a, b, answer: a - b, sign: '−' });
+        }
       }
+      return questions;
+    }
+
+    function shuffled(items) {
+      const result = [...items];
+      for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+      }
+      return result;
+    }
+
+    function updateProgress() {
+      document.querySelector('#progressText').textContent = mode === 'all'
+        ? `${solved} / ${pool.length}もん せいかい` : `${solved}もん せいかい`;
+      document.querySelector('#sessionInfo').textContent = mode === 'all'
+        ? (reviewing ? `ふくしゅうタイム · あと ${pool.length - solved}もん` : `全パターンれんしゅう · ${pool.length - queue.length} / ${pool.length}もんめ`)
+        : 'ランダムれんしゅう · すきなところで おわれるよ';
+    }
+
+    function resetInput(message = 'こたえを いれてね') {
       input = '';
       locked = false;
       document.querySelectorAll('.key').forEach(button => { button.disabled = false; button.classList.remove('chosen-answer'); });
-      problemEl.textContent = `${current.a} ${current.sign} ${current.b} ＝ ?`;
-      feedbackEl.textContent = 'こたえを いれてね';
+      feedbackEl.textContent = message;
       feedbackEl.className = 'feedback';
       updateAnswer();
+    }
+
+    function makeQuestion() {
+      clearTimeout(advanceTimer);
+      if (mode === 'all') {
+        if (!queue.length) {
+          if (!reviewQueue.length) { endSession(true); return; }
+          queue = shuffled(reviewQueue);
+          reviewQueue = [];
+          reviewing = true;
+        }
+        current = queue.shift();
+      } else {
+        current = pool[Math.floor(Math.random() * pool.length)];
+      }
+      resetInput();
+      problemEl.textContent = `${current.a} ${current.sign} ${current.b} ＝ ?`;
+      updateProgress();
+    }
+
+    function endSession(completed = false) {
+      clearTimeout(advanceTimer);
+      locked = true;
+      practice.classList.add('hidden');
+      finish.classList.remove('hidden');
+      document.querySelector('#finishTitle').textContent = completed ? 'ぜんもん せいかい！' : 'よくがんばったね！';
+      document.querySelector('#finishSummary').textContent = completed
+        ? `${pool.length}問ぜんぶ せいかいできたね！ まちがえた問題も ふくしゅうできたよ。`
+        : mode === 'all' ? `${pool.length}問のうち ${solved}問 せいかい！ また チャレンジしよう。`
+        : `こんかいは ${solved}問 せいかい！ また いつでも れんしゅうしよう。`;
     }
 
     function updateAnswer() {
@@ -150,7 +218,7 @@
     }
 
     function typeDigit(digit) {
-      if (locked || input.length >= String(current.answer).length) return;
+      if (locked || !current || practice.classList.contains('hidden') || input.length >= String(current.answer).length) return;
       input += digit;
       updateAnswer();
       if (input.length >= String(current.answer).length) checkAnswer();
@@ -171,22 +239,21 @@
       });
       if (Number(input) === current.answer) {
         solved += 1;
-        document.querySelector('#solved').textContent = solved;
+        updateProgress();
         feedbackEl.textContent = '○ せいかい！';
         feedbackEl.className = 'feedback good';
         advanceTimer = setTimeout(() => { if (!practice.classList.contains('hidden') && locked) makeQuestion(); }, 650);
       } else {
         feedbackEl.textContent = `× せいかいは ${current.answer}`;
         feedbackEl.className = 'feedback try';
-        advanceTimer = setTimeout(() => {
-          if (practice.classList.contains('hidden') || !locked) return;
-          locked = false;
-          input = '';
-          updateAnswer();
-          document.querySelectorAll('.key').forEach(button => { button.disabled = false; button.classList.remove('chosen-answer'); });
-          feedbackEl.textContent = 'もういちど こたえてね';
-          feedbackEl.className = 'feedback try';
-        }, 750);
+        if (mode === 'all') {
+          reviewQueue.push(current);
+          advanceTimer = setTimeout(() => { if (!practice.classList.contains('hidden') && locked) makeQuestion(); }, 1000);
+        } else {
+          advanceTimer = setTimeout(() => {
+            if (!practice.classList.contains('hidden') && locked) resetInput('もういちど こたえてね');
+          }, 750);
+        }
       }
     }
 
@@ -195,14 +262,17 @@
     document.querySelector('[data-action="back"]').addEventListener('click', () => { if (!locked) { input = input.slice(0, -1); updateAnswer(); } });
     document.querySelector('#start').addEventListener('click', () => {
       solved = 0;
-      document.querySelector('#solved').textContent = '0';
+      clearTimeout(advanceTimer);
+      pool = buildPool(operation);
+      queue = mode === 'all' ? shuffled(pool) : [];
+      reviewQueue = [];
+      reviewing = false;
+      document.querySelector('#practiceHint').textContent = mode === 'all'
+        ? '数字を押すとすぐに判定。まちがえた問題は、あとでふくしゅうするよ。'
+        : '数字を押すとすぐに判定。まちがえたら、同じ問題をもう一度！';
       setup.classList.add('hidden'); finish.classList.add('hidden'); practice.classList.remove('hidden'); makeQuestion();
     });
-    document.querySelector('#stop').addEventListener('click', () => {
-      clearTimeout(advanceTimer);
-      practice.classList.add('hidden'); finish.classList.remove('hidden');
-      document.querySelector('#finalCount').textContent = solved;
-    });
+    document.querySelector('#stop').addEventListener('click', () => endSession());
     document.querySelector('#again').addEventListener('click', () => {
       finish.classList.add('hidden'); setup.classList.remove('hidden');
     });
