@@ -5,14 +5,14 @@
 【作成日時】2026-10-21
 【概要】子ども向け計算練習アプリ。1桁の足し算・引き算を電卓式ボタンで練習する。
 【使い方】ブラウザで開き、計算を選んで「練習スタート」。数字を押すとすぐに答え合わせ。
-【仕様】ランダム練習と全パターン練習を選択。全パターンは0を含む順序別55問を重複なく出題し、誤答時は問題・自分の答え・正解をポップアップ表示し、「わかった」で次へ。全パターンは誤答を後で復習して全問正解で終了。途中終了可。子ども別の学習実績を端末に保存し、保護者画面で今日・月曜始まりの週・30日の記録を表示。週は横スクロールで移動し、棒のタップで日別レポートを表示。途中の問題進捗は保存なし。読み上げ、音声入力、3つの数、マイナスの答えは未実装。
+【仕様】ランダム練習と全パターン練習を選択。全パターンは0を含む順序別55問を重複なく出題し、誤答時は問題・自分の答え・正解をポップアップ表示し、「わかった」で次へ。全パターンは誤答を後で復習して全問正解で終了。途中終了可。子ども別の学習実績を端末に保存し、保護者画面で今日・月曜始まりの週・30日の記録を表示。週は横スクロールで移動し、週間・月間の棒のタップで日別レポートを表示。日別は左右スワイプ・前日翌日ボタンで日付を移動。途中の問題進捗は保存なし。読み上げ、音声入力、3つの数、マイナスの答えは未実装。
 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8ff">
-    <title>けいさんチャレンジ v0.6</title>
+    <title>けいさんチャレンジ v0.7</title>
   <style>
     :root { color-scheme: light; --ink:#26334b; --muted:#71809a; --blue:#5c76ed; --purple:#8d68dc; --mint:#54c8a2; --pink:#ff8b9d; --paper:#fff; }
     * { box-sizing:border-box; }
@@ -118,6 +118,12 @@
     .day-dialog-head { position:sticky;top:-22px;background:white;padding:10px 0;z-index:1; }
     .day-dialog-head h2 { margin-bottom:8px; }
     .day-dialog-head .secondary { width:100%;color:#5265b9; }
+    .day-navigation { margin:12px 0 18px; }
+    .day-navigation .week-nav { margin:9px 0; }
+    .daily-swipe { touch-action:pan-y pinch-zoom; }
+    .daily-swipe:focus-visible { outline:2px solid #8495ef;outline-offset:2px;border-radius:12px; }
+    button.trend-row { width:100%;min-height:42px;border:1px solid #e9edf7;background:#fafbff;border-radius:9px;padding:8px 5px;text-align:left; }
+    button.trend-row:hover,button.trend-row:focus-visible { background:#edf2ff; }
     .profile-settings { margin-top:18px;border-top:1px solid #e8ecf7;padding-top:12px; }
     .profile-settings summary { cursor:pointer;font-size:13px;font-weight:700; }
     .profile-settings label { display:block;font-size:12px;margin:12px 0 7px; }
@@ -131,7 +137,7 @@
 <body>
   <main class="app">
     <header>
-      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div class="version">VERSION 0.6 · おためし版</div></div></div>
+      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div class="version">VERSION 0.7 · おためし版</div></div></div>
       <div class="badge">1けた</div>
     </header>
 
@@ -183,7 +189,7 @@
       <h2 id="reportTitle">保護者向け 学習レポート</h2>
       <div class="report-profile"><label for="reportProfile">子ども</label><select id="reportProfile"></select></div>
       <div class="report-tabs" role="group" aria-label="集計期間">
-        <button class="choice" data-period="today" aria-pressed="true">今日</button>
+        <button class="choice" data-period="today" aria-pressed="true">日ごと</button>
         <button class="choice" data-period="week" aria-pressed="false">1週間</button>
         <button class="choice" data-period="month" aria-pressed="false">1か月</button>
       </div>
@@ -200,6 +206,7 @@
     <dialog id="dayDialog" class="report-dialog day-dialog" aria-labelledby="dayReportTitle">
       <div class="day-dialog-head"><h2 id="dayReportTitle">日別レポート</h2><button id="closeDay" class="secondary">週間グラフに戻る</button></div>
       <p id="dayReportWho" class="hint"></p>
+      <div id="dayNavigation"></div>
       <div id="dayReportContent"></div>
     </dialog>
     <dialog id="mistakeDialog" class="mistake-dialog" aria-labelledby="mistakeTitle" aria-describedby="mistakeMessage">
@@ -243,6 +250,8 @@
     let reportPeriod = 'today';
     let reportProfileId = null;
     let reportWeekStart = null;
+    let reportDay = null;
+    let dayReportState = null;
     const dayDialog = document.querySelector('#dayDialog');
     let storageFailed = false;
 
@@ -387,31 +396,111 @@
       for (let day = first; day <= current; day = shiftDay(day, 7)) weeks.push(day);
       return weeks;
     }
+    function dayLabel(day) {
+      const date = new Date(day + 'T12:00:00');
+      return `${day.replaceAll('-', '/')}（${['日', '月', '火', '水', '木', '金', '土'][date.getDay()]}）`;
+    }
+    function renderDayNavigation(container, day, changeDay) {
+      container.replaceChildren();
+      appendText(container, 'p', '左へスワイプで翌日、右へスワイプで前日。上下のスクロールもできます。', 'hint');
+      const nav = appendText(container, 'div', '', 'week-nav');
+      const prev = appendText(nav, 'button', '← 前日', 'secondary'); prev.type = 'button';
+      const today = appendText(nav, 'button', '今日', 'secondary'); today.type = 'button'; today.disabled = day === localDay();
+      const next = appendText(nav, 'button', '翌日 →', 'secondary'); next.type = 'button'; next.disabled = day >= localDay();
+      prev.addEventListener('click', () => changeDay(shiftDay(day, -1)));
+      today.addEventListener('click', () => changeDay(localDay()));
+      next.addEventListener('click', () => changeDay(shiftDay(day, 1)));
+      const label = appendText(container, 'p', dayLabel(day), 'week-range'); label.setAttribute('aria-live', 'polite');
+    }
+    function changeReportDay(day) {
+      if (day > localDay()) return;
+      reportDay = day; renderParent();
+    }
+    function changeDialogDay(day) {
+      if (!dayReportState || day > localDay()) return;
+      dayReportState.day = day; renderDayDialog();
+    }
+    function renderDayDialog() {
+      const profile = learning.profiles.find(p => p.id === dayReportState.profileId);
+      if (!profile) return;
+      const day = dayReportState.day;
+      document.querySelector('#dayReportTitle').textContent = `${day.replaceAll('-', '/')} のレポート`;
+      document.querySelector('#dayReportWho').textContent = profile.name;
+      document.querySelector('#closeDay').textContent = dayReportState.source === 'month' ? '月間グラフに戻る' : '週間グラフに戻る';
+      renderDayNavigation(document.querySelector('#dayNavigation'), day, changeDialogDay);
+      renderReportDetails(document.querySelector('#dayReportContent'), profile, [day]);
+    }
     function showDayReport(profileId, day) {
       const profile = learning.profiles.find(p => p.id === profileId);
       if (!profile || day > localDay()) return;
-      document.querySelector('#dayReportTitle').textContent = `${day.replaceAll('-', '/')} のレポート`;
-      document.querySelector('#dayReportWho').textContent = profile.name;
-      renderReportDetails(document.querySelector('#dayReportContent'), profile, [day]);
-      dayDialog.showModal();
+      dayReportState = { profileId, day, source: reportPeriod };
+      renderDayDialog();
+      if (!dayDialog.open) dayDialog.showModal();
     }
+    function enableDaySwipe(surface, move, enabled) {
+      let start = null;
+      let dragged = false;
+      function isControl(target) { return Boolean(target.closest('button, a, input, select, textarea, summary')); }
+      surface.addEventListener('pointerdown', event => {
+        start = null; dragged = false;
+        if (!enabled() || event.isPrimary === false || (event.pointerType === 'mouse' && event.button !== 0) || isControl(event.target)) return;
+        start = { x: event.clientX, y: event.clientY, id: event.pointerId };
+      });
+      surface.addEventListener('pointermove', event => {
+        if (!start || event.pointerId !== start.id) return;
+        const x = event.clientX - start.x, y = event.clientY - start.y;
+        if (Math.abs(y) > 24 && Math.abs(y) > Math.abs(x)) { start = null; return; }
+        if (Math.abs(x) >= 20 && Math.abs(x) > Math.abs(y) * 1.4) {
+          dragged = true;
+          if (event.cancelable) event.preventDefault();
+          if (surface.setPointerCapture && !surface.hasPointerCapture(event.pointerId)) surface.setPointerCapture(event.pointerId);
+        }
+      });
+      surface.addEventListener('pointerup', event => {
+        if (!start || event.pointerId !== start.id) return;
+        const x = event.clientX - start.x, y = event.clientY - start.y;
+        start = null;
+        if (enabled() && Math.abs(x) >= 50 && Math.abs(x) > Math.abs(y) * 1.4) {
+          dragged = true; move(x < 0 ? 1 : -1);
+        } else dragged = false;
+      });
+      surface.addEventListener('pointercancel', () => { start = null; dragged = false; });
+      surface.addEventListener('click', event => {
+        if (dragged) { event.preventDefault(); event.stopPropagation(); dragged = false; }
+      }, true);
+      surface.addEventListener('keydown', event => {
+        if (!enabled() || isControl(event.target) || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault(); move(event.key === 'ArrowLeft' ? -1 : 1);
+      });
+    }
+
     function renderParent() {
       const profile = learning.profiles.find(p => p.id === reportProfileId) || selectedProfile();
-      const dates = reportPeriod === 'week' ? weekDates(reportWeekStart || weekStartFor(localDay())) : periodDates(reportPeriod);
+      const dates = reportPeriod === 'week' ? weekDates(reportWeekStart || weekStartFor(localDay())) : reportPeriod === 'today' ? [reportDay || localDay()] : periodDates(reportPeriod);
       document.querySelector('#reportRange').textContent = `${profile.name} · ${dates[0]} 〜 ${dates.at(-1)}`;
       document.querySelectorAll('[data-period]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.period === reportPeriod)));
       const content = document.querySelector('#reportContent'); content.replaceChildren();
+      content.classList.toggle('daily-swipe', reportPeriod === 'today');
+      content.tabIndex = reportPeriod === 'today' ? 0 : -1;
+      if (reportPeriod === 'today') {
+        content.setAttribute('aria-label', '日ごとのレポート。左右にスワイプして日付を移動');
+        renderDayNavigation(appendText(content, 'div', '', 'day-navigation'), dates[0], changeReportDay);
+      } else content.removeAttribute('aria-label');
       if (reportPeriod === 'week') {
         renderWeekChart(content, profile);
         return;
       }
       if (reportPeriod === 'month') {
         appendText(content, 'h3', '1か月の推移（今日を含む30日間）');
+        appendText(content, 'p', '日の棒をタップすると日別レポートが開きます。', 'hint');
         const trend = appendText(content, 'div', '', 'trend');
         const max = Math.max(1, ...dates.map(date => profile.days[date]?.attempts || 0));
         for (const date of dates) {
           const day = profile.days[date]; const attempts = day?.attempts || 0;
-          const row = appendText(trend, 'div', '', 'trend-row'); appendText(row, 'span', `${Number(date.slice(5, 7))}/${Number(date.slice(8))}`);
+          const row = appendText(trend, 'button', '', 'trend-row'); row.type = 'button';
+          row.setAttribute('aria-label', `${date} ${attempts}問 日別レポート`);
+          row.addEventListener('click', () => showDayReport(profile.id, date));
+          appendText(row, 'span', `${Number(date.slice(5, 7))}/${Number(date.slice(8))}`);
           const track = appendText(row, 'div', '', 'trend-track'); track.setAttribute('aria-hidden', 'true');
           const bar = appendText(track, 'div', '', 'trend-bar'); bar.style.width = `${attempts / max * 100}%`;
           appendText(row, 'span', `${attempts}問 · ${attempts ? Math.round(day.correct / attempts * 100) + '%' : '—'}`);
@@ -531,13 +620,17 @@
       learning.selectedId = event.target.value; saveLearning();
     });
     document.querySelector('#openParent').addEventListener('click', () => {
-      pauseClock(); reportPeriod = 'today'; reportWeekStart = weekStartFor(localDay()); reportProfileId = learning.selectedId; refreshProfiles(); renderParent(); parentDialog.showModal();
+      pauseClock(); reportPeriod = 'today'; reportDay = localDay(); reportWeekStart = weekStartFor(localDay()); reportProfileId = learning.selectedId; refreshProfiles(); renderParent(); parentDialog.showModal();
     });
     parentDialog.addEventListener('close', () => { if (dayDialog.open) dayDialog.close(); startClock(); });
     document.querySelector('#closeDay').addEventListener('click', () => dayDialog.close());
+    dayDialog.classList.add('daily-swipe');
+    dayDialog.addEventListener('close', () => { dayReportState = null; });
+    enableDaySwipe(document.querySelector('#reportContent'), delta => changeReportDay(shiftDay(reportDay || localDay(), delta)), () => parentDialog.open && reportPeriod === 'today' && !dayDialog.open);
+    enableDaySwipe(dayDialog, delta => { if (dayReportState) changeDialogDay(shiftDay(dayReportState.day, delta)); }, () => dayDialog.open);
     document.querySelector('#closeParent').addEventListener('click', () => parentDialog.close());
     document.querySelector('#reportProfile').addEventListener('change', event => { reportProfileId = event.target.value; renderParent(); });
-    document.querySelectorAll('[data-period]').forEach(button => button.addEventListener('click', () => { if (button.dataset.period === 'week' && reportPeriod !== 'week') reportWeekStart = weekStartFor(localDay()); reportPeriod = button.dataset.period; renderParent(); }));
+    document.querySelectorAll('[data-period]').forEach(button => button.addEventListener('click', () => { if (button.dataset.period === 'week' && reportPeriod !== 'week') reportWeekStart = weekStartFor(localDay()); if (button.dataset.period === 'today' && reportPeriod !== 'today') reportDay = localDay(); reportPeriod = button.dataset.period; renderParent(); }));
     function editProfile(add) {
       const input = document.querySelector('#profileName'); const name = input.value.trim().slice(0, 20);
       if (!name) { document.querySelector('#profileMessage').textContent = '名前を入力してください。'; input.focus(); return; }
