@@ -4,18 +4,19 @@
 【作成日時】2026-10-24
 【概要】繰上りのある足し算を「10を作る・残り・答え」の3段階で練習する状態管理。
 【使い方】ブラウザはCarryPractice.Session、Node.jsはrequireで利用。
-【仕様】1〜9の2数、和が10〜18となる45通り。全問・ランダム・指定例。誤答は同じ段階を再試行し、全問モードは後でも復習。保存・本番連携なし。
+【仕様】1〜9の2数、和が11〜18となる36通り。最初の数の下限を2〜9で指定。全問・ランダム・指定例。誤答は同じ段階を再試行し、全問モードは後でも復習。保存・本番連携なし。
 */
 (function (root) {
   'use strict';
   const key = q => `${q.a}:${q.b}`;
   function question(a, b) {
-    if (!Number.isInteger(a) || !Number.isInteger(b) || a < 1 || a > 9 || b < 1 || b > 9 || a + b < 10) throw new RangeError('繰上りのある1桁の足し算を指定してください。');
+    if (!Number.isInteger(a) || !Number.isInteger(b) || a < 1 || a > 9 || b < 1 || b > 9 || a + b <= 10) throw new RangeError('繰上りのある1桁の足し算を指定してください。');
     return { a, b, need: 10 - a, rest: b - (10 - a), answer: a + b };
   }
-  function pool() {
+  function pool(minFirst = 2) {
+    if (!Number.isInteger(minFirst) || minFirst < 2 || minFirst > 9) throw new RangeError('最初の数は2〜9で指定してください。');
     const result = [];
-    for (let a = 1; a <= 9; a++) for (let b = 1; b <= 9; b++) if (a + b >= 10) result.push(question(a, b));
+    for (let a = minFirst; a <= 9; a++) for (let b = 1; b <= 9; b++) if (a + b > 10) result.push(question(a, b));
     return result;
   }
   function shuffle(items, random) {
@@ -24,9 +25,9 @@
     return result;
   }
   class Session {
-    constructor({ mode = 'all', example = { a: 8, b: 7 }, random = Math.random } = {}) {
+    constructor({ mode = 'all', example = { a: 8, b: 7 }, random = Math.random, minFirst = 2 } = {}) {
       if (!['all', 'random', 'example'].includes(mode)) throw new RangeError('Unknown mode');
-      this.mode = mode; this.random = random; this.pool = mode === 'example' ? [question(example.a, example.b)] : pool();
+      this.mode = mode; this.random = random; this.pool = mode === 'example' ? [question(example.a, example.b)] : pool(minFirst);
       this.queue = mode === 'random' ? [] : shuffle(this.pool, random); this.review = []; this.mastered = new Set();
       this.round = 1; this.completed = 0; this.attempts = 0; this.mistakes = 0; this.current = null;
       this.status = 'idle'; this.stage = 0; this.values = [null, null, null]; this.hadMistake = false;
