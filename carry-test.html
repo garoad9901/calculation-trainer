@@ -10,7 +10,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f4f7ff"><title>10をつくろう · 繰上り練習テスト v0.4</title>
+<meta name="theme-color" content="#f4f7ff"><title>10をつくろう · 繰上り練習テスト v0.5</title>
 <style>
 :root{color-scheme:light;--ink:#26334b;--muted:#71809a;--blue:#5c76ed;--orange:#efab47;--mint:#54b896}*{box-sizing:border-box}body{margin:0;background:linear-gradient(155deg,#eef3ff,#fffaf2 70%,#f2fbf6);color:var(--ink);font-family:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;padding:18px 12px 30px;min-height:100dvh}button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}button:focus-visible,a:focus-visible{outline:3px solid #5474cd;outline-offset:3px}button:disabled{cursor:default}.app{max-width:480px;margin:auto}header{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 3px 15px}h1{font-size:22px;margin:0}header small{font-size:11px;color:var(--muted)}.badge{background:#fff1d5;color:#966a28;font-size:11px;font-weight:800;border-radius:99px;padding:8px 10px}.card{border:1px solid #e4eafa;border-radius:24px;background:#fff;padding:21px;box-shadow:0 10px 35px #53618a0f}h2{font-size:19px;margin:0 0 8px}.hint{font-size:13px;color:var(--muted);line-height:1.7;margin:8px 0}.intro{background:#f3f6ff;border-radius:15px;padding:13px 15px;margin:16px 0;line-height:1.9;font-size:14px}.intro strong{color:#4f62ae}.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}.choice{border:2px solid #e6ebf7;background:white;color:var(--ink);border-radius:14px;padding:13px 5px;font-weight:800}.choice[aria-pressed=true]{background:#f0f3ff;border-color:var(--blue);color:#445fc7}.primary{border:0;border-radius:15px;background:linear-gradient(100deg,#5c76ed,#8d68dc);color:white;width:100%;font-weight:800;font-size:16px;padding:14px}.secondary{background:white;border:1px solid #dce4f3;color:#5265a1;border-radius:14px;padding:12px;font-weight:700;font-size:13px}.example{width:100%;margin:10px 0 0;background:#f9fafc}.tiny{font-size:11px;color:var(--muted);line-height:1.7;margin:13px 0 0;text-align:center}.meta{display:flex;justify-content:space-between;font-size:12px;color:#6675a9;margin:0 4px 9px}.steps{display:flex;gap:5px;margin-bottom:12px}.step{flex:1;border-radius:10px;background:#edf0f6;color:#8c97ac;padding:8px 0;font-size:11px;text-align:center;font-weight:800}.step.active{background:#e8edff;color:#3c58bf}.step.passed{background:#e6f6ed;color:#237a57}.work{padding:16px 16px 13px}.prompt{font-size:17px;font-weight:850;text-align:center;min-height:48px;line-height:1.5;margin:2px 0 0}.diagram{display:block;width:100%;height:auto;overflow:visible}.math{font-size:39px;font-weight:850;fill:#26334b;font-variant-numeric:tabular-nums}.bond-value{font-size:29px;font-weight:850;fill:#26334b}.bond-label{font-size:10px;fill:#71809a}.field{fill:#f7f9fd;stroke:#d9e1ef;stroke-width:2}.field.active{fill:#fff4dd;stroke:#e9a735;stroke-width:3}.field.done{fill:#eff8f3;stroke:#93cdb3}.branch{stroke:#aab8d0;stroke-width:2.5;fill:none}.ten-helper{border-radius:12px;background:#f8faff;padding:10px 12px}.ten-title{font-size:11px;color:var(--muted);margin:0 0 7px}.ten-cells{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}.cell{aspect-ratio:1;border:1px dashed #b8c6dc;border-radius:4px;background:white}.cell.filled{background:#86a1e8;border-color:#86a1e8}.cell.moved{background:#f1b65b;border-color:#f1b65b}.tokens{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;min-height:16px}.token{width:14px;height:14px;border-radius:4px;background:#6fc6a8}.token.used{background:#f1b65b;opacity:.5}.helper-equation{font-size:17px;font-weight:800;text-align:center;color:#5265a5;margin-top:8px;min-height:26px}.feedback{font-size:13px;font-weight:800;min-height:22px;margin:8px 0 0;text-align:center}.feedback.good{color:#11633e}.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.key{min-height:49px;border:1px solid #b9c8db;border-radius:13px;background:#eaf1ff;color:#173c73;font-size:23px;font-weight:800}.key:active:not(:disabled){filter:brightness(.94);transform:translateY(1px)}.key:disabled{opacity:.55}.key.utility{font-size:15px;background:#f1f4f9}.keypad.single [data-digit="0"]{grid-column:2}.actions{display:flex;gap:8px;margin-top:11px}.actions button{flex:1}.next:disabled{opacity:.4}.done{text-align:center;padding:30px 22px}.done .emoji{font-size:48px;margin-bottom:15px}dialog{width:min(calc(100% - 28px),410px);max-height:calc(100dvh - 30px);overflow:auto;border:1px solid #edddd4;border-radius:24px;padding:25px 22px;background:#fffaf5;color:var(--ink);box-shadow:0 20px 70px #26334b33;text-align:center}dialog::backdrop{background:#26334b66}dialog h2{color:#a5533e;font-size:25px}.wrong-values{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:15px 0}.wrong-values div{background:#fff;border:1px solid #e9e5e0;border-radius:14px;padding:12px 4px;font-size:12px}.wrong-values strong{display:block;font-size:33px;margin-top:5px}.wrong-values div:first-child strong{color:#a52c3b}.wrong-values div:last-child strong{color:#11633e}.wrong-explain{font-size:16px;font-weight:750;line-height:1.8}footer{text-align:center;margin-top:18px}footer a{font-size:12px;color:#7483aa}.hidden{display:none!important}@media(max-width:380px){body{padding:12px 10px 24px}.card{padding:17px}.work{padding:12px}.key{min-height:45px}.prompt{font-size:16px}.step{font-size:10px}.badge{padding:7px}}
 
@@ -21,7 +21,7 @@
 </style>
 </head>
 <body><main class="app">
-<header><div><h1>10を つくろう</h1><small>くり上がりの れんしゅう · v0.4</small></div><span class="badge">機能テスト</span></header>
+<header><div><h1>10を つくろう</h1><small>くり上がりの れんしゅう · v0.5</small></div><span class="badge">機能テスト</span></header>
 <section id="setup" class="card">
 <h2>わけて、10を つくろう</h2><p class="hint">たす数を2つにわけて、じゅんばんに けいさんするよ。</p>
 <div class="intro"><strong>8 ＋ 7 のとき</strong><br>① 8を10にするために、7から <strong>2</strong><br>② 7を2と <strong>5</strong> にわける<br>③ 10 ＋ 5 ＝ <strong>15</strong></div>
@@ -55,14 +55,14 @@
 </main><script src="./carry-engine.js"></script><script>
 'use strict';
 const $ = id => document.getElementById(id);
-let selectedMode = 'all', session = null, input = '';
+let selectedMode = 'all', session = null, input = '', stepTimer = null;
 const stageNames = ['10をつくる', 'のこりを かんがえる', 'さいごの こたえ'];
 document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
  selectedMode = button.dataset.mode;
  document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
 }));
 function begin(mode) {
- session = new CarryPractice.Session({ mode }); input = '';
+ clearTimeout(stepTimer); session = new CarryPractice.Session({ mode }); input = '';
  $('setup').classList.add('hidden'); $('finish').classList.add('hidden'); $('practice').classList.remove('hidden');
  session.next(); render();
 }
@@ -116,15 +116,20 @@ function typeDigit(digit) {
  const result = session.submit(input); render();
  if (!result.correct) {
   $('mistakeStage').textContent = stageNames[session.stage]; $('wrongInput').textContent = input; $('wrongExpected').textContent = result.expected; $('wrongExplain').textContent = result.explanation; $('mistake').showModal();
+ } else if (!result.completed) {
+  stepTimer = setTimeout(() => {
+   if (session.status !== 'step-complete' || $('practice').classList.contains('hidden')) return;
+   session.advance(); input = ''; render();
+  }, 450);
  } else {
   const q = session.current;
-  $('correctEquation').textContent = [`${q.a} ＋ ${q.need} ＝ 10`, `${q.b} ＝ ${q.need} ＋ ${q.rest}`, `${q.a} ＋ ${q.b} ＝ ${q.answer}`][session.stage];
-  $('correctNext').textContent = !result.completed ? 'つぎへ' : session.mode !== 'random' && session.remaining === 0 ? 'けっかを みる' : 'つぎの もんだい';
+  $('correctEquation').textContent = `${q.a} ＋ ${q.b} ＝ ${q.answer}`;
+  $('correctNext').textContent = session.mode !== 'random' && session.remaining === 0 ? 'けっかを みる' : 'つぎの もんだい';
   $('correct').showModal();
  }
 }
 function finish() {
- const fullyDone = session.mode !== 'random' && session.remaining === 0 && session.status === 'finished';
+ clearTimeout(stepTimer); const fullyDone = session.mode !== 'random' && session.remaining === 0 && session.status === 'finished';
  session.stop(); $('practice').classList.add('hidden'); $('finish').classList.remove('hidden');
  $('finishTitle').textContent = fullyDone ? 'ぜんぶ できたね！' : 'よく がんばったね！';
  $('finishSummary').textContent = `${session.completed}問、3つの手順で計算できました。${session.mistakes ? ` もういちど考えた回数は${session.mistakes}回。` : ''}${session.mode === 'all' && fullyDone ? ' 全45問と復習をクリア！' : ''}`;
@@ -132,10 +137,9 @@ function finish() {
 $('start').addEventListener('click', () => begin(selectedMode)); $('example').addEventListener('click', () => begin('example'));
 $('correct').addEventListener('cancel', event => event.preventDefault());
 $('correctNext').addEventListener('click', () => {
- if (!session || !['step-complete', 'complete'].includes(session.status)) return;
+ if (!session || session.status !== 'complete') return;
  $('correct').close(); input = '';
- if (session.status === 'step-complete') { session.advance(); render(); }
- else if (session.next()) render(); else finish();
+ if (session.next()) render(); else finish();
 });
 $('stop').addEventListener('click', finish);
 $('again').addEventListener('click', () => { $('finish').classList.add('hidden'); $('setup').classList.remove('hidden'); });
