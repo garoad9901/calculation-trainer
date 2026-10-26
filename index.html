@@ -3,16 +3,16 @@
 【ChatGPT】
 【FileName】index.html
 【作成日時】2026-10-21
-【概要】子ども向け計算練習アプリ。1桁の足し算・引き算を電卓式ボタンで練習する。
+【概要】子ども向け計算練習アプリ。通常の足し算・引き算と、10を作る繰上り練習。
 【使い方】ブラウザで開き、計算を選んで「練習スタート」。数字を押すとすぐに答え合わせ。
-【仕様】ランダム練習と全パターン練習を選択。全パターンは0を含む順序別55問を重複なく出題し、誤答時は問題・自分の答え・正解をポップアップ表示し、「わかった」で次へ。全パターンは誤答を後で復習して全問正解で終了。途中終了可。子ども別の学習実績を端末に保存し、保護者画面で今日・月曜始まりの週・30日の記録を表示。週は横スクロールで移動し、週間・月間の棒のタップで日別レポートを表示。日別は左右スワイプ・前日翌日ボタンで日付を移動。全パターンのタイムアタックと子ども・計算別の自己ベストを保存。初記録・更新時にお祝い。デバッグ演出確認は記録に影響しない。途中の問題進捗は保存なし。読み上げ、音声入力、3つの数、マイナスの答えは未実装。
+【仕様】ランダム練習と全パターン練習を選択。全パターンは0を含む順序別55問を重複なく出題し、誤答時は問題・自分の答え・正解をポップアップ表示し、「わかった」で次へ。全パターンは誤答を後で復習して全問正解で終了。途中終了可。子ども別の学習実績を端末に保存し、保護者画面で今日・月曜始まりの週・30日の記録を表示。週は横スクロールで移動し、週間・月間の棒のタップで日別レポートを表示。日別は左右スワイプ・前日翌日ボタンで日付を移動。全パターンのタイムアタックと子ども・計算別の自己ベストを保存。初記録・更新時にお祝い。デバッグ演出確認は記録に影響しない。繰上りは3段階で回答し、最後の正解だけポップアップ。分けた片方が0になる問題を除外。最初の数の下限は子ども別に保護者設定。途中の問題進捗は保存なし。読み上げ、音声入力、3つの数、マイナスの答えは未実装。
 -->
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8ff">
-    <title>けいさんチャレンジ v1.0</title>
+    <title>けいさんチャレンジ v1.1</title>
   <style>
     :root { color-scheme: light; --ink:#26334b; --muted:#71809a; --blue:#5c76ed; --purple:#8d68dc; --mint:#54c8a2; --pink:#ff8b9d; --paper:#fff; }
     * { box-sizing:border-box; }
@@ -159,12 +159,18 @@
     .share-url { display:block;color:#5265b9;overflow-wrap:anywhere;font-size:12px;line-height:1.7; }
     .hidden { display:none !important; }
     @media (max-width:380px) { body{padding:12px 10px 20px}.card{padding:18px}.key{min-height:53px} }
-  </style>
+  
+#carryWork .prompt{font-size:17px;font-weight:850;text-align:center;min-height:48px;line-height:1.5;margin:2px 0 0}#carryWork .diagram{display:block;width:100%;height:auto;overflow:visible}#carryWork .math{font-size:39px;font-weight:850;fill:#26334b;font-variant-numeric:tabular-nums}#carryWork .bond-value{font-size:29px;font-weight:850;fill:#26334b}#carryWork .bond-label{font-size:10px;fill:#71809a}#carryWork .field{fill:#f7f9fd;stroke:#d9e1ef;stroke-width:2}#carryWork .field.active{fill:#fff4dd;stroke:#e9a735;stroke-width:3}#carryWork .field.done{fill:#eff8f3;stroke:#93cdb3}#carryWork .branch{stroke:#aab8d0;stroke-width:2.5;fill:none}#carryWork .ten-helper{border-radius:12px;background:#f8faff;padding:10px 12px}#carryWork .ten-title{font-size:11px;color:var(--muted);margin:0 0 7px}#carryWork .ten-cells{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}#carryWork .cell{aspect-ratio:1;border:1px dashed #b8c6dc;border-radius:4px;background:white}#carryWork .cell.filled{background:#86a1e8;border-color:#86a1e8}#carryWork .cell.moved{background:#f1b65b;border-color:#f1b65b}#carryWork .tokens{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;min-height:16px}#carryWork .token{width:14px;height:14px;border-radius:4px;background:#6fc6a8}#carryWork .token.used{background:#f1b65b;opacity:.5}#carryWork .helper-equation{font-size:17px;font-weight:800;text-align:center;color:#5265a5;margin-top:8px;min-height:26px}#carryWork .prompt{font-size:16px}
+.carry-choice{grid-column:1 / -1;padding:12px}.key{box-shadow:0 3px 0 #c2cfe4;transition:transform .08s,background-color .08s,box-shadow .08s}
+.key:active:not(:disabled),.key.pressing:not(:disabled){background:#bcd0f7;transform:translateY(3px) scale(.96);box-shadow:none;filter:none}
+#carryCorrect{background:#f5fff9}#carryCorrect h2{color:#16734f}#carryCorrectEquation{font-size:30px;font-weight:850}
+@media(prefers-reduced-motion:reduce){.key{transition:none}.key:active:not(:disabled),.key.pressing:not(:disabled){transform:none}}
+</style>
 </head>
 <body>
   <main class="app">
     <header>
-      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div id="appVersion" class="version">VERSION 1.0 · 正式版</div></div></div>
+      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div id="appVersion" class="version">VERSION 1.1 · 正式版</div></div></div>
       <div class="badge">1けた</div>
     </header>
 
@@ -180,6 +186,7 @@
       <div class="choice-row" role="group" aria-label="計算の種類">
         <button class="choice" data-op="add" aria-pressed="true"><span class="symbol">＋</span>たしざん</button>
         <button class="choice" data-op="sub" aria-pressed="false"><span class="symbol">−</span>ひきざん</button>
+        <button class="choice carry-choice" data-op="carry" aria-pressed="false">10をつくる たしざん<small>くり上がりを わけて れんしゅう</small></button>
       </div>
       <div class="choice-row" role="group" aria-label="練習のしかた">
         <button class="choice mode-choice" data-mode="all" aria-pressed="true">全パターンれんしゅう<small>ぜんぶ せいかいを めざそう</small></button>
@@ -192,14 +199,25 @@
         <p id="setupBest" class="best-note"></p>
       </div>
       <button id="start" class="start">れんしゅうスタート</button>
-      <p class="tiny">いまは、くり上がり・くり下がりのない計算だよ。<br>全パターンは0をふくむ55問。2＋3と3＋2は別の問題だよ。<br>とちゅうで おわると、つぎは はじめからになるよ。</p>
+      <p id="setupDescription" class="tiny"></p>
     </section>
 
     <section id="practice" class="hidden">
-      <div class="stage"><div class="stage-name">🌱 くり上がり・くり下がりなし</div><div class="progress"><span id="progressText">0もん せいかい</span></div></div>
+      <div class="stage"><div id="stageName" class="stage-name">🌱 くり上がり・くり下がりなし</div><div class="progress"><span id="progressText">0もん せいかい</span></div></div>
       <div id="attackClock" class="attack-clock hidden"><div><small>⏱ タイムアタック</small><strong id="attackTime">0:00.00</strong><small id="attackStatus">けいそく中</small></div><div id="attackBest" class="attack-best"></div></div>
       <p id="sessionInfo" class="hint session-info"></p>
       <div class="card problem-card">
+        <div id="carryWork" class="hidden"><p id="carryPrompt" class="prompt" aria-live="polite"></p>
+<svg class="diagram" viewBox="0 0 360 183" role="img" aria-labelledby="carryDiagramTitle"><title id="carryDiagramTitle"></title>
+<text id="carryFirst" x="42" y="53" text-anchor="middle" class="math"></text><text x="87" y="53" text-anchor="middle" class="math">＋</text><text id="carrySecond" x="146" y="53" text-anchor="middle" class="math"></text><text x="210" y="53" text-anchor="middle" class="math">＝</text>
+<rect id="carryAnswerField" class="field" x="252" y="14" width="78" height="50" rx="10"/><text id="carryTotal" x="291" y="52" text-anchor="middle" class="math"></text>
+<path d="M146 67 L100 103 M146 67 L193 103" class="branch"/>
+<rect id="carryNeedField" class="field" x="69" y="104" width="62" height="49" rx="10"/><text id="carryNeed" x="100" y="139" text-anchor="middle" class="bond-value"></text>
+<rect id="carryRestField" class="field" x="162" y="104" width="62" height="49" rx="10"/><text id="carryRest" x="193" y="139" text-anchor="middle" class="bond-value"></text>
+<text x="100" y="174" text-anchor="middle" class="bond-label">10にするほう</text><text x="193" y="174" text-anchor="middle" class="bond-label">のこり</text>
+</svg>
+<div class="ten-helper"><p id="carryTenTitle" class="ten-title"></p><div id="carryTenCells" class="ten-cells" aria-hidden="true"></div><div id="carryTokens" class="tokens" aria-hidden="true"></div><div id="carryHelperEquation" class="helper-equation"></div></div>
+</div>
         <div id="problem" class="problem" aria-live="polite">3 ＋ 4 ＝ ?</div>
         <div id="answer" class="answer-box empty" aria-label="入力した答え">?</div>
         <div id="feedback" class="feedback" aria-live="polite">こたえを いれてね</div>
@@ -229,6 +247,7 @@
         <button class="choice" data-period="month" aria-pressed="false">1か月</button>
       </div>
       <p id="reportRange" class="hint"></p>
+      <details class="profile-settings"><summary>繰り上がり練習の設定</summary><p class="hint">最初の数（足される数）を、いくつから出題するか選びます。子どもごとに保存され、次の練習から反映されます。</p><label for="carryMinimum">最初の数の下限</label><select id="carryMinimum"><option value="2">2から9</option><option value="3">3から9</option><option value="4">4から9</option><option value="5">5から9</option><option value="6">6から9</option><option value="7">7から9</option><option value="8">8から9</option><option value="9">9から9</option></select><p id="carrySettingsSummary" class="hint"></p><p class="tiny">分けた片方が0になる問題は出題しません。範囲ごとに自己ベストを記録します。</p></details>
       <div id="reportContent"></div>
       <details class="profile-settings"><summary>正式版の共有QRコード</summary>
         <p class="hint">別の端末では、このQRコードを読み取って開けます。</p>
@@ -271,9 +290,11 @@
       <button id="understood" class="start" autofocus>わかった</button>
     </dialog>
   </main>
+  <dialog id="carryCorrect" class="mistake-dialog" aria-labelledby="carryCorrectTitle"><h2 id="carryCorrectTitle">せいかい！</h2><p id="carryCorrectEquation"></p><button id="carryNext" class="start">つぎの もんだい</button></dialog>
+  <script src="./carry-engine.js?v=1.1"></script>
   <script>
     const APP_CONFIG = Object.freeze({ debug: new URLSearchParams(window.location.search).get('debug') === '1' }); // ?debug=1 のときだけ確認機能を表示。
-    const APP_VERSION = '1.0';
+    const APP_VERSION = '1.1';
     const setup = document.querySelector('#setup');
     const practice = document.querySelector('#practice');
     const finish = document.querySelector('#finish');
@@ -282,6 +303,9 @@
     const feedbackEl = document.querySelector('#feedback');
     const mistakeDialog = document.querySelector('#mistakeDialog');
     let operation = 'add';
+    let carrySession = null, carryMinimum = 2;
+    const carryCorrect = document.querySelector('#carryCorrect');
+    const operationLabel = op => op === 'carry' ? '10をつくる たしざん' : op === 'add' ? 'たしざん' : 'ひきざん';
     let mode = 'all';
     let current = null;
     let input = '';
@@ -313,8 +337,8 @@
     let storageFailed = false;
 
     // v1: 繰上り・繰下りなし55問＋復習。回答待ち時間のみを計測するルール。
-    function attackKey(op = operation) { return `v1:${op}:single-no-carry:55`; }
-    function bestFor(profile, op = operation) { return profile.bests?.[attackKey(op)] || null; }
+    function attackKey(op = operation, minimum = sessionRunning ? carryMinimum : (selectedProfile().carryMinFirst || 2)) { return op === 'carry' ? `v1:carry:ten-making:min${minimum}` : `v1:${op}:single-no-carry:55`; }
+    function bestFor(profile, op = operation, minimum = sessionRunning && profile.id === sessionProfileId ? carryMinimum : (profile.carryMinFirst || 2)) { return profile.bests?.[attackKey(op, minimum)] || null; }
     function formatAttackTime(milliseconds) {
       const hundredths = Math.max(0, Math.round(milliseconds / 10));
       return `${Math.floor(hundredths / 6000)}:${String(Math.floor(hundredths / 100) % 60).padStart(2, '0')}.${String(hundredths % 100).padStart(2, '0')}`;
@@ -330,9 +354,12 @@
       document.querySelector('#attackBest').textContent = best ? `じこベスト ${formatAttackTime(best.timeMs)}` : 'はじめての きろくに ちょうせん！';
     }
     function updateChallengeSetup() {
+      const n = operation === 'carry' ? CarryPractice.pool(selectedProfile().carryMinFirst || 2).length : 55;
+      document.querySelector('#modeHint').textContent = mode === 'all' ? `${n}問をひととおり → まちがえた問題をふくしゅう → 全問せいかいでゴール！` : 'すきなところで おわれるよ。';
+      document.querySelector('#setupDescription').textContent = operation === 'carry' ? `最初の数は${selectedProfile().carryMinFirst || 2}〜9。保護者向けから変更できます。わけて10をつくり、さいごに答えをいれよう。` : 'くり上がり・くり下がりのない計算。全パターンは0をふくむ55問。とちゅうで おわると、つぎは はじめからになるよ。';
       document.querySelector('#attackOption').classList.toggle('hidden', mode !== 'all');
       const best = bestFor(selectedProfile());
-      document.querySelector('#setupBest').textContent = best ? `🏆 ${operation === 'add' ? 'たしざん' : 'ひきざん'}の じこベスト ${formatAttackTime(best.timeMs)}` : 'ぜんもん といて、はじめての きろくを つくろう！';
+      document.querySelector('#setupBest').textContent = best ? `🏆 ${operationLabel(operation)}の じこベスト ${formatAttackTime(best.timeMs)}` : 'ぜんもん といて、はじめての きろくを つくろう！';
     }
     function saveAttackResult() {
       const profile = activeSessionProfile();
@@ -341,14 +368,14 @@
       const isBest = previous === null || timeMs < previous.timeMs;
       if (isBest) {
         if (!profile.bests) profile.bests = {};
-        profile.bests[attackKey()] = { timeMs, date: localDay() };
+        profile.bests[attackKey(operation, carryMinimum)] = { timeMs, date: localDay() };
         saveLearning();
       }
-      return { isBest, first: previous === null, timeMs, previousMs: previous?.timeMs ?? null, name: profile.name, operation, preview: false };
+      return { isBest, first: previous === null, timeMs, previousMs: previous?.timeMs ?? null, name: profile.name, operation, questionCount: pool.length, preview: false };
     }
     function showCelebration(result) {
       document.querySelector('#celebrationTitle').textContent = result.first ? 'はじめての きろく！' : 'じこベスト こうしん！';
-      document.querySelector('#celebrationWho').textContent = `${result.name} · ${result.operation === 'add' ? 'たしざん' : 'ひきざん'} 55もん＋ふくしゅう`;
+      document.querySelector('#celebrationWho').textContent = `${result.name} · ${operationLabel(result.operation)} ${result.questionCount || 55}もん＋ふくしゅう`;
       document.querySelector('#celebrationTime').textContent = formatAttackTime(result.timeMs);
       document.querySelector('#celebrationMessage').textContent = result.first ? 'ぜんもん せいかいで、きろくが できたね！\nさいごまで よく がんばったね！' : `まえのきろくより ${((result.previousMs - result.timeMs) / 1000).toFixed(2)}びょう はやくなったね！\nすごい！ また ひとつ せいちょうしたね！`;
       document.querySelector('#celebrationPrevious').textContent = result.previousMs === null ? 'つぎは このきろくに チャレンジ！' : `まえの じこベスト ${formatAttackTime(result.previousMs)}`;
@@ -368,7 +395,7 @@
       if (!APP_CONFIG.debug) return;
       pauseClock();
       const profile = parentDialog.open ? learning.profiles.find(p => p.id === reportProfileId) || selectedProfile() : sessionRunning ? activeSessionProfile() : selectedProfile();
-      showCelebration({ first: false, timeMs: 83450, previousMs: 91200, name: profile.name, operation, preview: true });
+      showCelebration({ first: false, timeMs: 83450, previousMs: 91200, name: profile.name, operation, questionCount: operation === 'carry' ? CarryPractice.pool(profile.carryMinFirst || 2).length : 55, preview: true });
     }
 
     function localDay(date = new Date()) {
@@ -388,6 +415,7 @@
         for (const profile of data.profiles) {
           if (!profile || typeof profile.id !== 'string' || seen.has(profile.id) || typeof profile.name !== 'string' || !profile.days || !profile.missed) throw Error('Invalid profile');
           seen.add(profile.id);
+          if (!Number.isInteger(profile.carryMinFirst) || profile.carryMinFirst < 2 || profile.carryMinFirst > 9) profile.carryMinFirst = 2;
           if (!profile.bests || typeof profile.bests !== 'object' || Array.isArray(profile.bests)) profile.bests = {};
           for (const [key, best] of Object.entries(profile.bests)) {
             if (!best || !Number.isFinite(best.timeMs) || best.timeMs <= 0 || typeof best.date !== 'string') delete profile.bests[key];
@@ -504,7 +532,7 @@
       const element = document.createElement(tag); element.textContent = text; element.className = className; parent.append(element); return element;
     }
     function problemLabel(key) {
-      const [op, a, b] = key.split(':'); return `${a} ${op === 'add' ? '＋' : '−'} ${b}`;
+      const [op, a, b] = key.split(':'); return `${a} ${op === 'sub' ? '−' : '＋'} ${b}${op === 'carry' ? '（10をつくる）' : ''}`;
     }
     function shiftDay(day, offset) {
       const date = new Date(day + 'T12:00:00'); date.setDate(date.getDate() + offset); return localDay(date);
@@ -603,6 +631,8 @@
 
     function renderParent() {
       const profile = learning.profiles.find(p => p.id === reportProfileId) || selectedProfile();
+      document.querySelector('#carryMinimum').value = profile.carryMinFirst || 2;
+      document.querySelector('#carrySettingsSummary').textContent = `最初の数：${profile.carryMinFirst || 2}〜9 · 全${CarryPractice.pool(profile.carryMinFirst || 2).length}問`;
       const dates = reportPeriod === 'week' ? weekDates(reportWeekStart || weekStartFor(localDay())) : reportPeriod === 'today' ? [reportDay || localDay()] : periodDates(reportPeriod);
       document.querySelector('#reportRange').textContent = `${profile.name} · ${dates[0]} 〜 ${dates.at(-1)}`;
       document.querySelectorAll('[data-period]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.period === reportPeriod)));
@@ -728,7 +758,7 @@
       appendText(content, 'p', praise, 'praise');
       appendText(content, 'h3', '計算ごとの取り組み');
       const operations = appendText(content, 'ul', '', 'report-list');
-      for (const [op, label] of [['add', 'たしざん'], ['sub', 'ひきざん']]) {
+      for (const [op, label] of [['add', 'たしざん'], ['sub', 'ひきざん'], ['carry', '10をつくる たしざん']]) {
         const problems = Object.entries(totals.problems).filter(([key]) => key.startsWith(op + ':')).map(([, p]) => p);
         const n = problems.reduce((sum, p) => sum + p.attempts, 0), correct = problems.reduce((sum, p) => sum + p.correct, 0);
         appendText(operations, 'li', `${label}：${n}問 / 正答率 ${n ? Math.round(correct / n * 100) + '%' : '—'}`);
@@ -795,10 +825,56 @@
       mode = button.dataset.mode;
       updateChallengeSetup();
       document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
-      document.querySelector('#modeHint').textContent = mode === 'all'
-        ? '55問をひととおり → まちがえた問題をふくしゅう → 全問せいかいでゴール！'
-        : 'すきなところで おわれるよ。まちがえたら、こたえを かくにんして 次へ。';
     }));
+
+
+    function renderCarry() {
+      if (operation !== 'carry' || !carrySession?.current) return;
+      const $ = id => document.querySelector('#carry' + id[0].toUpperCase() + id.slice(1));
+      const q = carrySession.current, stage = carrySession.stage;
+      const value = i => stage === i && input !== '' ? input : carrySession.values[i] === null ? '?' : String(carrySession.values[i]);
+      $('first').textContent = q.a; $('second').textContent = q.b;
+      $('need').textContent = value(0); $('rest').textContent = value(1); $('total').textContent = value(2);
+      $('diagramTitle').textContent = `${q.a}たす${q.b}。${q.b}を${value(0)}と${value(1)}に分ける。答えは${value(2)}。`;
+      ['needField','restField','answerField'].forEach((id,i) => { $(id).classList.toggle('active', stage === i && carrySession.status !== 'complete'); $(id).classList.toggle('done',carrySession.values[i] !== null); });
+      $('prompt').textContent = [`${q.a}を10にするには、あと いくつ？`,`${q.b}を${q.need}と いくつに わける？`,`10 と ${q.rest} を あわせると？`][stage];
+      $('tenTitle').textContent = carrySession.values[0] === null ? `${q.a}こ あるよ。10こにするには？` : `10のまとまり と のこり${carrySession.values[1] === null ? '？' : q.rest}こ`;
+      $('tenCells').replaceChildren(); $('tokens').replaceChildren();
+      for (let i=0;i<10;i++) { const el=document.createElement('span'); el.className='cell'+(i<q.a?' filled':carrySession.values[0]!==null?' moved':''); $('tenCells').append(el); }
+      for (let i=0;i<q.b;i++) { const el=document.createElement('span'); el.className='token'+(carrySession.values[0]!==null && i<q.need?' used':''); $('tokens').append(el); }
+      $('helperEquation').textContent = carrySession.values[0] === null ? 'まず、10のまとまりを つくろう' : carrySession.values[1] === null ? `${q.a} ＋ ${q.need} ＝ 10` : `10 ＋ ${q.rest} ＝ ${value(2)}`;
+    }
+    function expectedAnswer() { return operation === 'carry' ? carrySession.expected() : current.answer; }
+    function syncCarryProgress() { solved = carrySession.mastered.size; if (mode === 'random') solved = carrySession.completed; reviewing = carrySession.round > 1; queue = carrySession.queue; updateProgress(); }
+    function checkCarryAnswer() {
+      pauseClock(); locked = true;
+      const result = carrySession.submit(input);
+      document.querySelectorAll('.key').forEach(button => button.disabled = true);
+      renderCarry(); feedbackEl.textContent = '';
+      if (!result.correct) {
+        recordAnswer(false);
+        document.querySelector('#mistakeProblem').textContent = `${current.a} ＋ ${current.b}`;
+        document.querySelector('#mistakeInput').textContent = input;
+        document.querySelector('#mistakeCorrect').textContent = result.expected;
+        document.querySelector('#mistakeHint').textContent = result.explanation;
+        mistakeDialog.showModal();
+      } else if (!result.completed) {
+        advanceTimer = setTimeout(() => { if (!sessionRunning || carrySession.status !== 'step-complete') return; carrySession.advance(); resetInput('', false); renderCarry(); },450);
+      } else {
+        recordAnswer(true); syncCarryProgress();
+        document.querySelector('#carryCorrectEquation').textContent = `${current.a} ＋ ${current.b} ＝ ${current.answer}`;
+        document.querySelector('#carryNext').textContent = mode === 'all' && carrySession.remaining === 0 ? 'けっかを みる' : 'つぎの もんだい';
+        carryCorrect.showModal();
+      }
+    }
+    carryCorrect.addEventListener('cancel', event => event.preventDefault());
+    document.querySelector('#carryNext').addEventListener('click', () => { if (!carryCorrect.open || !sessionRunning) return; carryCorrect.close(); makeQuestion(); });
+    document.querySelector('#carryMinimum').addEventListener('change', event => {
+      const value = Number(event.target.value);
+      if (!Number.isInteger(value) || value < 2 || value > 9) return;
+      const profile = learning.profiles.find(p => p.id === reportProfileId) || selectedProfile();
+      profile.carryMinFirst = value; saveLearning(); renderParent(); updateChallengeSetup();
+    });
 
     function buildPool(op) {
       const questions = [];
@@ -828,15 +904,15 @@
         : 'ランダムれんしゅう · すきなところで おわれるよ';
     }
 
-    function resetInput(message = 'こたえを いれてね') {
+    function resetInput(message = 'こたえを いれてね', newQuestion = true) {
       input = '';
       locked = false;
-      questionSeconds = 0;
+      if (newQuestion) questionSeconds = 0;
       document.querySelectorAll('.key').forEach(button => { button.disabled = false; button.classList.remove('chosen-answer'); });
       feedbackEl.textContent = message;
       feedbackEl.className = 'feedback';
       updateAnswer();
-      const singleDigit = String(current.answer).length === 1;
+      const singleDigit = String(expectedAnswer()).length === 1;
       document.querySelector('.keypad').classList.toggle('single-digit', singleDigit);
       document.querySelectorAll('.key.utility').forEach(button => button.classList.toggle('hidden', singleDigit));
       startClock();
@@ -844,6 +920,10 @@
 
     function makeQuestion() {
       clearTimeout(advanceTimer);
+      if (operation === 'carry') {
+        if (!carrySession.next()) { endSession(true); return; }
+        current = { ...carrySession.current, sign: '+' }; resetInput(''); renderCarry(); syncCarryProgress(); return;
+      }
       if (mode === 'all') {
         if (!queue.length) {
           if (!reviewQueue.length) { endSession(true); return; }
@@ -871,13 +951,14 @@
       sessionRunning = false;
       document.querySelector('#learner').disabled = false;
       if (mistakeDialog.open) mistakeDialog.close();
+      if (carryCorrect.open) carryCorrect.close();
       locked = true;
       practice.classList.add('hidden');
       finish.classList.remove('hidden');
       document.querySelector('#finishTitle').textContent = completed ? 'ぜんもん せいかい！' : 'よくがんばったね！';
       document.querySelector('#finishTime').classList.toggle('hidden', !sessionTimed);
       if (sessionTimed) {
-        const best = bestFor(activeSessionProfile());
+        const best = bestFor(activeSessionProfile(), operation, carryMinimum);
         document.querySelector('#finishTime').textContent = `今回のタイム ${formatAttackTime(attackElapsedMs)}\n${completed ? 'じこベスト ' + (best ? formatAttackTime(best.timeMs) : '—') : 'とちゅうで終了 · 記録の対象外'}`;
       }
       document.querySelector('#finishSummary').textContent = completed
@@ -891,16 +972,18 @@
     function updateAnswer() {
       answerEl.textContent = input || '?';
       answerEl.classList.toggle('empty', !input);
+      renderCarry();
     }
 
     function typeDigit(digit) {
-      if (locked || !current || practice.classList.contains('hidden') || input.length >= String(current.answer).length) return;
+      if (locked || !current || practice.classList.contains('hidden') || input.length >= String(expectedAnswer()).length) return;
       input += digit;
       updateAnswer();
-      if (input.length >= String(current.answer).length) checkAnswer();
+      if (input.length >= String(expectedAnswer()).length) checkAnswer();
     }
 
     function checkAnswer() {
+      if (input.length < String(expectedAnswer()).length && input !== '') return;
       if (locked || input === '') {
         if (input === '') {
           feedbackEl.textContent = 'こたえを いれてね';
@@ -908,6 +991,7 @@
         }
         return;
       }
+      if (operation === 'carry') { checkCarryAnswer(); return; }
       pauseClock();
       recordAnswer(Number(input) === current.answer);
       locked = true;
@@ -941,11 +1025,13 @@
       if (!mistakeDialog.open) return;
       mistakeDialog.close();
       if (!practice.classList.contains('hidden')) {
+        if (operation === 'carry') { carrySession.retry(); resetInput('', false); renderCarry(); return; }
         makeQuestion();
         if (!practice.classList.contains('hidden')) document.querySelector('[data-digit="1"]').focus();
       }
     });
 
+    document.querySelectorAll('.key').forEach(button => { button.addEventListener('pointerdown', () => { if (!button.disabled) button.classList.add('pressing'); }); ['pointerup','pointercancel','pointerleave','blur'].forEach(name => button.addEventListener(name, () => button.classList.remove('pressing'))); });
     document.querySelectorAll('[data-digit]').forEach(button => button.addEventListener('click', () => typeDigit(button.dataset.digit)));
     document.querySelector('[data-action="clear"]').addEventListener('click', () => { if (!locked) { input = ''; updateAnswer(); } });
     document.querySelector('[data-action="back"]').addEventListener('click', () => { if (!locked) { input = input.slice(0, -1); updateAnswer(); } });
@@ -961,11 +1047,16 @@
       updateAttackDisplay();
       document.querySelector('#learner').disabled = true;
       clearTimeout(advanceTimer);
-      pool = buildPool(operation);
+      carryMinimum = activeSessionProfile().carryMinFirst || 2;
+      carrySession = operation === 'carry' ? new CarryPractice.Session({ mode, minFirst: carryMinimum }) : null;
+      pool = carrySession ? carrySession.pool : buildPool(operation);
+      document.querySelector('#stageName').textContent = operation === 'carry' ? '🌱 10をつくる たしざん' : '🌱 くり上がり・くり下がりなし';
+      document.querySelector('#carryWork').classList.toggle('hidden',operation !== 'carry');
+      problemEl.classList.toggle('hidden',operation === 'carry'); answerEl.classList.toggle('hidden',operation === 'carry');
       queue = mode === 'all' ? shuffled(pool) : [];
       reviewQueue = [];
       reviewing = false;
-      document.querySelector('#practiceHint').textContent = mode === 'all'
+      document.querySelector('#practiceHint').textContent = operation === 'carry' ? 'わけて10をつくろう。まちがえたら、その手順をもういちど。' : mode === 'all'
         ? '数字を押すとすぐに判定。まちがえた問題は、あとでふくしゅうするよ。'
         : 'まちがえたら、こたえを かくにん。「わかった」で次へすすむよ。';
       setup.classList.add('hidden'); finish.classList.add('hidden'); practice.classList.remove('hidden'); makeQuestion();
@@ -975,8 +1066,8 @@
       finish.classList.add('hidden'); setup.classList.remove('hidden'); updateChallengeSetup();
     });
     document.addEventListener('keydown', event => {
-      if (practice.classList.contains('hidden') || mistakeDialog.open || parentDialog.open || celebrationDialog.open) return;
-      if (/^\d$/.test(event.key)) typeDigit(event.key);
+      if (practice.classList.contains('hidden') || mistakeDialog.open || parentDialog.open || celebrationDialog.open || carryCorrect.open) return;
+      if (/^\d$/.test(event.key)) { event.preventDefault(); if (!event.repeat) typeDigit(event.key); }
       else if (event.key === 'Backspace' && !locked) { input = input.slice(0, -1); updateAnswer(); }
       else if (event.key === 'Enter') checkAnswer();
       else if (event.key === 'Escape' && !locked) { input = ''; updateAnswer(); }
