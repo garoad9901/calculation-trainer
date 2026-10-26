@@ -29,12 +29,12 @@ function boot(code = source, search = "?debug=1") {
   ids.practice.classes.add('hidden'); ids.finish.classes.add('hidden'); ids.timeAttack.checked = true;
   const keys = Array.from({ length: 10 }, (_, n) => new Element({ digit: String(n) }));
   const utilities = ['clear', 'back'].map(action => new Element({ action })); const keypad = new Element();
-  const operations = ['add', 'sub'].map(op => new Element({ op })), modes = ['all', 'random'].map(mode => new Element({ mode })), periods = ['today', 'week', 'month'].map(period => new Element({ period }));
+  const operations = ['add', 'sub', 'carry'].map(op => new Element({ op })), modes = ['all', 'random'].map(mode => new Element({ mode })), periods = ['today', 'week', 'month'].map(period => new Element({ period }));
   const debug = [new Element(), new Element()];
   const groups = { '[data-op]': operations, '[data-mode]': modes, '[data-period]': periods, '.key': [...keys, ...utilities], '.key.utility': utilities, '[data-digit]': keys, '.debug-only': debug };
   const document = { hidden: false, events: {}, createElement: () => new Element(), querySelector: s => s === '.keypad' ? keypad : s === '[data-digit="1"]' ? keys[1] : ids[s.slice(1)] || utilities.find(el => s === `[data-action="${el.dataset.action}"]`), querySelectorAll: s => groups[s] || [], addEventListener(type, fn) { (this.events[type] ||= []).push(fn); } };
   const pending = new Map(); let sequence = 0;
-  const context = vm.createContext({ document, window: Object.assign(new Element(), { location: { search } }), URLSearchParams, Math, Date: FakeDate, crypto, performance: { now: () => now }, requestAnimationFrame: fn => fn(), setInterval: () => 999, clearInterval() {}, setTimeout: fn => { pending.set(++sequence, fn); return sequence; }, clearTimeout: id => pending.delete(id), localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) } });
+  const context = vm.createContext({ CarryPractice: require('../carry-engine.js'), document, window: Object.assign(new Element(), { location: { search } }), URLSearchParams, Math, Date: FakeDate, crypto, performance: { now: () => now }, requestAnimationFrame: fn => fn(), setInterval: () => 999, clearInterval() {}, setTimeout: fn => { pending.set(++sequence, fn); return sequence; }, clearTimeout: id => pending.delete(id), localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) } });
   vm.runInContext(code, context);
   return { ids, keys, operations, modes, periods, document, debug, pending, state: expr => vm.runInContext(expr, context), flush() { assert.equal(pending.size, 1); const [id, fn] = pending.entries().next().value; pending.delete(id); fn(); } };
 }
@@ -85,3 +85,57 @@ for (const search of ['?debug=1', '?v=1.0&debug=1']) {
   assert(debugging.ids.celebrationDialog.open); assert.equal(JSON.stringify(debugging.state('learning')), before);
 }
 console.log('PASS: normal URL is release mode; only debug=1 enables preview; both URL modes share the existing learning records.');
+
+// Integrated carry practice: settings, progress, retry, clocks and storage isolation.
+app = boot(source, '');
+app.ids.openParent.click(); app.ids.carryMinimum.value = '8'; app.ids.carryMinimum.fire('change'); app.ids.closeParent.click();
+assert.equal(app.state('selectedProfile().carryMinFirst'), 8);
+app.operations[2].click(); assert(app.ids.modeHint.textContent.includes('15問'));
+app.ids.start.click(); assert.equal(app.state('pool.length'), 15); assert(app.state('current.a >= 8 && current.rest > 0'));
+assert(app.ids.problem.classes.has('hidden')); assert(!app.ids.carryWork.classes.has('hidden'));
+const beforeAttempts = app.state('dayRecord(activeSessionProfile()).attempts');
+now += 1000; app.keys[app.state('carrySession.expected()')].click();
+assert.equal(app.state('carrySession.stage'), 0); assert(!app.ids.carryCorrect.open); assert.equal(app.state('dayRecord(activeSessionProfile()).attempts'), beforeAttempts);
+const pausedCarry = app.state('currentAttackMs()'); now += 30000; assert.equal(app.state('currentAttackMs()'), pausedCarry); app.flush();
+assert.equal(app.state('carrySession.stage'), 1);
+// Wrong remainder waits for acknowledgement, retains the correct first part.
+now += 1000; app.keys[0].click(); assert(app.ids.mistakeDialog.open); const firstPart = app.state('carrySession.values[0]');
+now += 30000; app.ids.understood.click(); assert.equal(app.state('carrySession.stage'), 1); assert.equal(app.state('carrySession.values[0]'), firstPart);
+now += 1000; app.keys[app.state('carrySession.expected()')].click(); app.flush();
+assert.equal(app.state('carrySession.stage'), 2); assert(!app.ids.carryCorrect.open);
+assert(!app.ids.carryWork.classes.has('hidden')); assert.equal(app.state('document.querySelector(".keypad").classList.contains("single-digit")'), false);
+const totalDigits = String(app.state('carrySession.expected()'));
+now += 1000; app.keys[Number(totalDigits[0])].click(); assert(!app.ids.carryCorrect.open); assert.equal(app.state('locked'), false);
+app.state('checkAnswer()'); assert(!app.ids.carryCorrect.open); // Enter cannot submit one digit.
+app.keys[Number(totalDigits[1])].click(); assert(app.ids.carryCorrect.open); assert.equal(app.state('solved'), 0); assert.equal(app.state('carrySession.review.length'), 1);
+const correctPaused = app.state('currentAttackMs()'); now += 60000; assert.equal(app.state('currentAttackMs()'), correctPaused);
+assert.equal(app.ids.feedback.textContent, ''); app.ids.carryNext.click(); assert.equal(app.state('carrySession.stage'), 0);
+// Changing settings in flight applies on next session, keeping the current best category stable.
+app.ids.openParent.click(); app.ids.carryMinimum.value = '9'; app.ids.carryMinimum.fire('change'); app.ids.closeParent.click();
+assert.equal(app.state('carryMinimum'), 8); assert.equal(app.state('attackKey()'), 'v1:carry:ten-making:min8');
+let safety = 0;
+while (app.state('sessionRunning')) {
+ assert(++safety < 100);
+ for (let stage = 0; stage < 3; stage++) {
+  now += 100;
+  for (const digit of String(app.state('carrySession.expected()'))) app.keys[Number(digit)].click();
+  if (stage < 2) { assert(!app.ids.carryCorrect.open); app.flush(); }
+  else { assert(app.ids.carryCorrect.open); app.ids.carryNext.click(); }
+ }
+}
+assert.equal(app.state('carrySession.mastered.size'), 15); assert(app.ids.celebrationDialog.open);
+assert(app.ids.celebrationWho.textContent.includes('15もん')); assert(app.state('activeSessionProfile().bests["v1:carry:ten-making:min8"]'));
+assert.equal(app.state('activeSessionProfile().bests["v1:carry:ten-making:min9"]'), undefined);
+assert(app.state('Object.keys(dayRecord(activeSessionProfile()).problems).some(key => key.startsWith("carry:"))'));
+assert.equal(app.state('bestFor(learning.profiles[0], "add").timeMs'), 28000);
+app.ids.closeCelebration.click(); app.ids.again.click(); app.ids.start.click(); assert.equal(app.state('pool.length'), 8); assert.equal(app.state('carryMinimum'), 9);
+app.ids.stop.click();
+const carryReload = boot(source, ''); assert.equal(carryReload.state('selectedProfile().carryMinFirst'), 9);
+carryReload.operations[2].click(); carryReload.modes[1].click(); carryReload.ids.start.click();
+assert.equal(carryReload.state('sessionTimed'), false); assert(carryReload.state('current.a === 9 && current.rest > 0'));
+carryReload.ids.stop.click();
+// Child-specific setting does not leak to another profile.
+carryReload.ids.openParent.click(); carryReload.ids.profileName.value = '繰上りの別の子'; carryReload.ids.addProfile.click(); carryReload.ids.closeParent.click();
+assert.equal(carryReload.state('selectedProfile().carryMinFirst || 2'), 2);
+carryReload.ids.again.click(); carryReload.ids.start.click(); assert.equal(carryReload.state('pool.length'), 36);
+console.log('PASS: integrated carry practice; child settings and reload; no zero remainders; auto steps and final-only popup; same-step retry and deferred review; pause clocks; per-range bests; existing records preserved; random mode.');
