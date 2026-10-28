@@ -11,12 +11,15 @@ let expectedCount=0;
 for(let a=1;a<=9;a++) for(let b=1;b<=9;b++) for(let c=1;c<=9;c++) for(const x of ['+','−']) for(const y of ['+','−']) {
  const l=x==='+'?a+b:a-b, r=y==='+'?b+c:b-c;
  const total=y==='+'?l+c:l-c, alternative=x==='+'?a+r:a-r;
- const valid=l>=0 && r>=0 && total>=0 && alternative>=0;
+ const subtractionFirstOK = x === '+' && y === '−' ? a >= c && b >= c : x === '−' && y === '+' ? a >= b && c >= b : true;
+ const valid=subtractionFirstOK && l>=0 && r>=0 && total>=0 && alternative>=0;
  assert.equal(actual.has(key({a,b,c,sign:x,secondSign:y})),valid);
  if(valid){expectedCount++;assert.equal(question(a,b,c,x,y).answer,total);}
  else assert.throws(()=>question(a,b,c,x,y),RangeError);
 }
 assert.equal(qs.length,expectedCount);
+assert.throws(()=>question(4,9,7,'+','−'));
+assert.throws(()=>question(9,4,2,'−','+'));
 assert.throws(()=>question(5,2,3,'+','−'));
 assert.throws(()=>question(3,5,1,'−','+'));
 assert.throws(()=>question(5,3,4,'−','+')); // right-first would also end negative
