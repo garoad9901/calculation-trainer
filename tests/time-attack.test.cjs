@@ -29,12 +29,12 @@ function boot(code = source, search = "?debug=1") {
   ids.practice.classes.add('hidden'); ids.finish.classes.add('hidden'); ids.timeAttack.checked = true;
   const keys = Array.from({ length: 10 }, (_, n) => new Element({ digit: String(n) }));
   const utilities = ['clear', 'back'].map(action => new Element({ action })); const keypad = new Element();
-  const operations = ['add', 'sub', 'carry'].map(op => new Element({ op })), modes = ['all', 'random'].map(mode => new Element({ mode })), periods = ['today', 'week', 'month'].map(period => new Element({ period }));
+  const operations = ['add', 'sub', 'carry', 'three'].map(op => new Element({ op })), modes = ['all', 'random'].map(mode => new Element({ mode })), periods = ['today', 'week', 'month'].map(period => new Element({ period }));
   const debug = [new Element(), new Element()];
   const groups = { '[data-op]': operations, '[data-mode]': modes, '[data-period]': periods, '.key': [...keys, ...utilities], '.key.utility': utilities, '[data-digit]': keys, '.debug-only': debug };
   const document = { hidden: false, events: {}, createElement: () => new Element(), querySelector: s => s === '.keypad' ? keypad : s === '[data-digit="1"]' ? keys[1] : ids[s.slice(1)] || utilities.find(el => s === `[data-action="${el.dataset.action}"]`), querySelectorAll: s => groups[s] || [], addEventListener(type, fn) { (this.events[type] ||= []).push(fn); } };
   const pending = new Map(); let sequence = 0;
-  const context = vm.createContext({ CarryPractice: require('../carry-engine.js'), document, window: Object.assign(new Element(), { location: { search } }), URLSearchParams, Math, Date: FakeDate, crypto, performance: { now: () => now }, requestAnimationFrame: fn => fn(), setInterval: () => 999, clearInterval() {}, setTimeout: fn => { pending.set(++sequence, fn); return sequence; }, clearTimeout: id => pending.delete(id), localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) } });
+  const context = vm.createContext({ CarryPractice: require('../carry-engine.js'), ThreePractice: require('../three-engine.js'), document, window: Object.assign(new Element(), { location: { search } }), URLSearchParams, Math, Date: FakeDate, crypto, performance: { now: () => now }, requestAnimationFrame: fn => fn(), setInterval: () => 999, clearInterval() {}, setTimeout: fn => { pending.set(++sequence, fn); return sequence; }, clearTimeout: id => pending.delete(id), localStorage: { getItem: key => storage.get(key) || null, setItem: (key, value) => storage.set(key, value) } });
   vm.runInContext(code, context);
   return { ids, keys, operations, modes, periods, document, debug, pending, state: expr => vm.runInContext(expr, context), flush() { assert.equal(pending.size, 1); const [id, fn] = pending.entries().next().value; pending.delete(id); fn(); } };
 }
@@ -139,3 +139,42 @@ carryReload.ids.openParent.click(); carryReload.ids.profileName.value = '繰上�
 assert.equal(carryReload.state('selectedProfile().carryMinFirst || 2'), 2);
 carryReload.ids.again.click(); carryReload.ids.start.click(); assert.equal(carryReload.state('pool.length'), 36);
 console.log('PASS: integrated carry practice; child settings and reload; no zero remainders; auto steps and final-only popup; same-step retry and deferred review; pause clocks; per-range bests; existing records preserved; random mode.');
+
+// Three-number expressions use all terms in records, review and timed bests.
+app = boot(source, ''); app.operations[3].click();
+const threeCount = require('../three-engine.js').pool().length;
+assert.equal(app.state('buildPool("three").length'),threeCount);
+assert(app.ids.modeHint.textContent.includes(String(threeCount)));
+app.ids.start.click(); assert.equal(app.state('attackKey()'),'v1:three:both-orders-nonnegative:1-9');
+let sawTwoDigits = false;
+for (let i=0;i<threeCount;i++) {
+ const answer=app.state('current.answer'); now+=10;
+ assert.equal(app.ids.problem.textContent, app.state('questionLabel(current) + " ＝ ?"'));
+ if(i===0) {
+  const wrong=answer===0?1:answer-1;
+  for(const digit of String(wrong).padStart(String(answer).length,'0')) app.keys[Number(digit)].click();
+  assert(app.ids.mistakeDialog.open); assert.equal(app.ids.mistakeProblem.textContent,app.state('questionLabel(current) + " ＝ ?"'));
+  const paused=app.state('currentAttackMs()'); now+=60000; assert.equal(app.state('currentAttackMs()'),paused);
+  app.ids.understood.click();
+ } else {
+  const digits=String(answer);
+  for(let j=0;j<digits.length;j++) {
+   app.keys[Number(digits[j])].click();
+   if(digits.length===2 && j===0) { sawTwoDigits=true; assert(!app.ids.carryCorrect.open); assert.equal(app.state('locked'),false); }
+  }
+  assert(app.ids.carryCorrect.open); assert.equal(app.ids.feedback.textContent,''); assert.equal(app.pending.size,0);
+  app.ids.carryNext.click();
+ }
+}
+assert(sawTwoDigits); assert(app.state('reviewing')); assert.equal(app.state('solved'),threeCount-1);
+for(const digit of String(app.state('current.answer'))) app.keys[Number(digit)].click();
+assert(app.ids.carryCorrect.open); assert.equal(app.ids.carryNext.textContent,'けっかを みる');
+app.ids.carryNext.click(); assert(!app.state('sessionRunning')); assert(app.ids.celebrationDialog.open);
+assert(app.ids.celebrationWho.textContent.includes(`${threeCount}もん`));
+assert(app.state('activeSessionProfile().bests["v1:three:both-orders-nonnegative:1-9"]'));
+assert.equal(app.state('Object.keys(dayRecord(activeSessionProfile()).problems).filter(k=>k.startsWith("three:")).length'),threeCount);
+assert.equal(app.state('problemLabel("three:5:+:3:−:2")'),'5 + 3 − 2');
+app.ids.closeCelebration.click(); app.ids.again.click(); app.modes[1].click(); app.ids.start.click(); assert.equal(app.state('sessionTimed'),false);
+for(const digit of String(app.state('current.answer'))) app.keys[Number(digit)].click();
+assert(app.ids.carryCorrect.open); app.ids.carryNext.click(); app.ids.stop.click();
+console.log('PASS: three-number full pool + deferred review; distinct expression records; two-digit input; final popup navigation; clock pause; dedicated bests; random mode.');
