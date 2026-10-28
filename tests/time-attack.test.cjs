@@ -145,7 +145,7 @@ app = boot(source, ''); app.operations[3].click();
 const threeCount = require('../three-engine.js').pool().length;
 assert.equal(app.state('buildPool("three").length'),threeCount);
 assert(app.ids.modeHint.textContent.includes(String(threeCount)));
-app.ids.start.click(); assert.equal(app.state('attackKey()'),'v1:three:both-orders-nonnegative:1-9');
+app.ids.start.click(); assert.equal(app.state('attackKey()'),'v2:three:all-subtractions-nonnegative:1-9');
 let sawTwoDigits = false;
 for (let i=0;i<threeCount;i++) {
  const answer=app.state('current.answer'); now+=10;
@@ -171,7 +171,7 @@ for(const digit of String(app.state('current.answer'))) app.keys[Number(digit)].
 assert(app.ids.carryCorrect.open); assert.equal(app.ids.carryNext.textContent,'けっかを みる');
 app.ids.carryNext.click(); assert(!app.state('sessionRunning')); assert(app.ids.celebrationDialog.open);
 assert(app.ids.celebrationWho.textContent.includes(`${threeCount}もん`));
-assert(app.state('activeSessionProfile().bests["v1:three:both-orders-nonnegative:1-9"]'));
+assert(app.state('activeSessionProfile().bests["v2:three:all-subtractions-nonnegative:1-9"]'));
 assert.equal(app.state('Object.keys(dayRecord(activeSessionProfile()).problems).filter(k=>k.startsWith("three:")).length'),threeCount);
 assert.equal(app.state('problemLabel("three:5:+:3:−:2")'),'5 + 3 − 2');
 app.ids.closeCelebration.click(); app.ids.again.click(); app.modes[1].click(); app.ids.start.click(); assert.equal(app.state('sessionTimed'),false);
