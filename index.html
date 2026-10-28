@@ -12,7 +12,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8ff">
-    <title>けいさんチャレンジ v1.2</title>
+    <title>けいさんチャレンジ v1.2.2</title>
   <style>
     :root { color-scheme: light; --ink:#26334b; --muted:#71809a; --blue:#5c76ed; --purple:#8d68dc; --mint:#54c8a2; --pink:#ff8b9d; --paper:#fff; }
     * { box-sizing:border-box; }
@@ -171,7 +171,7 @@
 <body>
   <main class="app">
     <header>
-      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div id="appVersion" class="version">VERSION 1.2 · 正式版</div></div></div>
+      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div id="appVersion" class="version">VERSION 1.2.2 · 正式版</div></div></div>
       <div class="badge">1けた</div>
     </header>
 
@@ -294,10 +294,10 @@
   </main>
   <dialog id="carryCorrect" class="mistake-dialog" aria-labelledby="carryCorrectTitle"><h2 id="carryCorrectTitle">せいかい！</h2><p id="carryCorrectEquation"></p><button id="carryNext" class="start">つぎの もんだい</button></dialog>
   <script src="./carry-engine.js?v=1.1"></script>
-  <script src="./three-engine.js?v=1.2.1"></script>
+  <script src="./three-engine.js?v=1.2.2"></script>
   <script>
     const APP_CONFIG = Object.freeze({ debug: new URLSearchParams(window.location.search).get('debug') === '1' }); // ?debug=1 のときだけ確認機能を表示。
-    const APP_VERSION = '1.2';
+    const APP_VERSION = '1.2.2';
     const setup = document.querySelector('#setup');
     const practice = document.querySelector('#practice');
     const finish = document.querySelector('#finish');
@@ -340,7 +340,7 @@
     let storageFailed = false;
 
     // v1: 繰上り・繰下りなし55問＋復習。回答待ち時間のみを計測するルール。
-    function attackKey(op = operation, minimum = sessionRunning ? carryMinimum : (selectedProfile().carryMinFirst || 2)) { return op === 'three' ? 'v2:three:all-subtractions-nonnegative:1-9' : op === 'carry' ? `v1:carry:ten-making:min${minimum}` : `v1:${op}:single-no-carry:55`; }
+    function attackKey(op = operation, minimum = sessionRunning ? carryMinimum : (selectedProfile().carryMinFirst || 2)) { return op === 'three' ? 'v3:three:all-orders-0-10:1-9' : op === 'carry' ? `v1:carry:ten-making:min${minimum}` : `v1:${op}:single-no-carry:55`; }
     function bestFor(profile, op = operation, minimum = sessionRunning && profile.id === sessionProfileId ? carryMinimum : (profile.carryMinFirst || 2)) { return profile.bests?.[attackKey(op, minimum)] || null; }
     function formatAttackTime(milliseconds) {
       const hundredths = Math.max(0, Math.round(milliseconds / 10));
@@ -359,7 +359,7 @@
     function updateChallengeSetup() {
       const n = operation === 'carry' ? CarryPractice.pool(selectedProfile().carryMinFirst || 2).length : operation === 'three' ? ThreePractice.pool().length : 55;
       document.querySelector('#modeHint').textContent = mode === 'all' ? `${n}問をひととおり → まちがえた問題をふくしゅう → 全問せいかいでゴール！` : 'すきなところで おわれるよ。';
-      document.querySelector('#setupDescription').textContent = operation === 'carry' ? `最初の数は${selectedProfile().carryMinFirst || 2}〜9。保護者向けから変更できます。わけて10をつくり、さいごに答えをいれよう。` : operation === 'three' ? '1〜9の数を3つ使うよ。どちらの2つから計算しても、マイナスにならない問題です。' : 'くり上がり・くり下がりのない計算。全パターンは0をふくむ55問。とちゅうで おわると、つぎは はじめからになるよ。';
+      document.querySelector('#setupDescription').textContent = operation === 'carry' ? `最初の数は${selectedProfile().carryMinFirst || 2}〜9。保護者向けから変更できます。わけて10をつくり、さいごに答えをいれよう。` : operation === 'three' ? '1〜9の数を3つ使うよ。計算の途中も答えも0〜10になる問題です。' : 'くり上がり・くり下がりのない計算。全パターンは0をふくむ55問。とちゅうで おわると、つぎは はじめからになるよ。';
       document.querySelector('#attackOption').classList.toggle('hidden', mode !== 'all');
       const best = bestFor(selectedProfile());
       document.querySelector('#setupBest').textContent = best ? `🏆 ${operationLabel(operation)}の じこベスト ${formatAttackTime(best.timeMs)}` : 'ぜんもん といて、はじめての きろくを つくろう！';
