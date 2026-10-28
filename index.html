@@ -294,7 +294,7 @@
   </main>
   <dialog id="carryCorrect" class="mistake-dialog" aria-labelledby="carryCorrectTitle"><h2 id="carryCorrectTitle">せいかい！</h2><p id="carryCorrectEquation"></p><button id="carryNext" class="start">つぎの もんだい</button></dialog>
   <script src="./carry-engine.js?v=1.1"></script>
-  <script src="./three-engine.js?v=1.2"></script>
+  <script src="./three-engine.js?v=1.2.1"></script>
   <script>
     const APP_CONFIG = Object.freeze({ debug: new URLSearchParams(window.location.search).get('debug') === '1' }); // ?debug=1 のときだけ確認機能を表示。
     const APP_VERSION = '1.2';
@@ -340,7 +340,7 @@
     let storageFailed = false;
 
     // v1: 繰上り・繰下りなし55問＋復習。回答待ち時間のみを計測するルール。
-    function attackKey(op = operation, minimum = sessionRunning ? carryMinimum : (selectedProfile().carryMinFirst || 2)) { return op === 'three' ? 'v1:three:both-orders-nonnegative:1-9' : op === 'carry' ? `v1:carry:ten-making:min${minimum}` : `v1:${op}:single-no-carry:55`; }
+    function attackKey(op = operation, minimum = sessionRunning ? carryMinimum : (selectedProfile().carryMinFirst || 2)) { return op === 'three' ? 'v2:three:all-subtractions-nonnegative:1-9' : op === 'carry' ? `v1:carry:ten-making:min${minimum}` : `v1:${op}:single-no-carry:55`; }
     function bestFor(profile, op = operation, minimum = sessionRunning && profile.id === sessionProfileId ? carryMinimum : (profile.carryMinFirst || 2)) { return profile.bests?.[attackKey(op, minimum)] || null; }
     function formatAttackTime(milliseconds) {
       const hundredths = Math.max(0, Math.round(milliseconds / 10));
