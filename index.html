@@ -12,7 +12,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8ff">
-    <title>けいさんチャレンジ v1.2.2</title>
+    <title>けいさんチャレンジ v1.2.3</title>
   <style>
     :root { color-scheme: light; --ink:#26334b; --muted:#71809a; --blue:#5c76ed; --purple:#8d68dc; --mint:#54c8a2; --pink:#ff8b9d; --paper:#fff; }
     * { box-sizing:border-box; }
@@ -171,7 +171,7 @@
 <body>
   <main class="app">
     <header>
-      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div id="appVersion" class="version">VERSION 1.2.2 · 正式版</div></div></div>
+      <div class="brand"><div class="logo" aria-hidden="true">🧮</div><div><h1>けいさんチャレンジ</h1><div id="appVersion" class="version">VERSION 1.2.3 · 正式版</div></div></div>
       <div class="badge">1けた</div>
     </header>
 
@@ -297,7 +297,9 @@
   <script src="./three-engine.js?v=1.2.2"></script>
   <script>
     const APP_CONFIG = Object.freeze({ debug: new URLSearchParams(window.location.search).get('debug') === '1' }); // ?debug=1 のときだけ確認機能を表示。
-    const APP_VERSION = '1.2.2';
+    const APP_VERSION = '1.2.3';
+    const NEXT_QUESTION_DELAY_MS = 250;
+    const CARRY_STEP_DELAY_MS = 200;
     const setup = document.querySelector('#setup');
     const practice = document.querySelector('#practice');
     const finish = document.querySelector('#finish');
@@ -863,7 +865,7 @@
         document.querySelector('#mistakeHint').textContent = result.explanation;
         mistakeDialog.showModal();
       } else if (!result.completed) {
-        advanceTimer = setTimeout(() => { if (!sessionRunning || carrySession.status !== 'step-complete') return; carrySession.advance(); resetInput('', false); renderCarry(); },450);
+        advanceTimer = setTimeout(() => { if (!sessionRunning || carrySession.status !== 'step-complete') return; carrySession.advance(); resetInput('', false); renderCarry(); }, CARRY_STEP_DELAY_MS);
       } else {
         recordAnswer(true); syncCarryProgress();
         document.querySelector('#carryCorrectEquation').textContent = `${current.a} ＋ ${current.b} ＝ ${current.answer}`;
@@ -1018,7 +1020,7 @@
         }
         feedbackEl.textContent = '○ せいかい！';
         feedbackEl.className = 'feedback good';
-        advanceTimer = setTimeout(() => { if (!practice.classList.contains('hidden') && locked) makeQuestion(); }, 650);
+        advanceTimer = setTimeout(() => { if (!practice.classList.contains('hidden') && locked) makeQuestion(); }, NEXT_QUESTION_DELAY_MS);
       } else {
         feedbackEl.textContent = `× せいかいは ${current.answer}`;
         feedbackEl.className = 'feedback try';
